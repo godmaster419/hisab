@@ -6,7 +6,7 @@ import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import {
   Sun, Moon, Monitor, Download, Upload, Trash2, Save,
-  Globe, Database, Shield,
+  Globe, Database, Shield, Smartphone, CheckCircle,
 } from 'lucide-react';
 import { getSettings, updateSettings, exportAllData, importData } from '@/store';
 import { exportBackupJSON } from '@/utils/export';
@@ -192,6 +192,27 @@ export default function SettingsPage() {
             <p>✅ कोई डेटा किसी सर्वर पर नहीं भेजा जाता</p>
             <p>✅ आप कभी भी बैकअप ले सकते हैं</p>
             <p>⚠️ ब्राउज़र डेटा क्लियर करने पर डेटा मिट सकता है — बैकअप रखें!</p>
+          </div>
+        </div>
+
+        {/* PWA & Offline Info */}
+        <div className="card" style={{ padding: 24, marginBottom: 16 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Smartphone size={18} /> मोबाइल ऐप / Progressive Web App (PWA)
+          </h3>
+          <div style={{
+            padding: 16, background: 'var(--bg-tertiary)', borderRadius: 12,
+            fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.8,
+          }}>
+            <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+              📲 फ़ोन या कंप्यूटर पर App की तरह चलाएँ:
+            </p>
+            <p>1. <strong>Chrome / Android:</strong> ब्राउज़र मेन्यू (⋮) में जाकर <strong>&quot;Add to Home screen&quot;</strong> या <strong>&quot;Install App&quot;</strong> पर क्लिक करें।</p>
+            <p>2. <strong>iPhone (Safari):</strong> Share बटन (📤) दबाएँ और <strong>&quot;Add to Home Screen&quot;</strong> चुनें।</p>
+            <p>3. <strong>Desktop (Chrome/Edge):</strong> एड्रेस बार में दाईं तरफ़ <strong>Install (⬇️)</strong> आइकॉन पर क्लिक करें।</p>
+            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--brand-primary)', fontWeight: 600 }}>
+              <CheckCircle size={16} /> 100% ऑफ़लाइन सपोर्ट: बिना इंटरनेट भी सभी हिसाब सुरक्षित काम करेंगे।
+            </div>
           </div>
         </div>
 
