@@ -5,7 +5,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { HisabEvent, MoneyReceived, Expense } from '@/types';
-import { formatCurrency, formatDate, CATEGORY_LABELS, PAYMENT_LABELS } from '@/utils/helpers';
+import { formatPDFCurrency, formatDate, CATEGORY_LABELS, PAYMENT_LABELS } from '@/utils/helpers';
 import { getEventSummary, getCategorySummary, getPersonSummary } from '@/store';
 
 export function generateEventPDF(
@@ -106,10 +106,10 @@ export function generateEventPDF(
   const colWidth = (pageWidth - 2 * margin) / 4;
 
   const summaryItems = [
-    { label: 'Opening', value: formatCurrency(summary.openingBalance), color: [100, 100, 100] as [number, number, number] },
-    { label: 'Received', value: formatCurrency(summary.totalReceived), color: [16, 185, 129] as [number, number, number] },
-    { label: 'Spent', value: formatCurrency(summary.totalSpent), color: [239, 68, 68] as [number, number, number] },
-    { label: 'Balance', value: formatCurrency(summary.balance), color: [99, 102, 241] as [number, number, number] },
+    { label: 'Opening', value: formatPDFCurrency(summary.openingBalance), color: [100, 100, 100] as [number, number, number] },
+    { label: 'Received', value: formatPDFCurrency(summary.totalReceived), color: [16, 185, 129] as [number, number, number] },
+    { label: 'Spent', value: formatPDFCurrency(summary.totalSpent), color: [239, 68, 68] as [number, number, number] },
+    { label: 'Balance', value: formatPDFCurrency(summary.balance), color: [99, 102, 241] as [number, number, number] },
   ];
 
   summaryItems.forEach((item, i) => {
@@ -144,7 +144,7 @@ export function generateEventPDF(
         (i + 1).toString(),
         formatDate(m.date),
         m.givenBy,
-        formatCurrency(m.amount),
+        formatPDFCurrency(m.amount),
         m.depositedWith,
         m.purpose || '-',
         PAYMENT_LABELS[m.paymentMethod]?.en || m.paymentMethod,
@@ -159,7 +159,7 @@ export function generateEventPDF(
       bodyStyles: { fontSize: 8 },
       styles: { cellPadding: 3, overflow: 'linebreak' },
       margin: { left: margin, right: margin },
-      foot: [['', '', 'Total', formatCurrency(summary.totalReceived), '', '', '']],
+      foot: [['', '', 'Total', formatPDFCurrency(summary.totalReceived), '', '', '']],
       footStyles: { fillColor: [236, 253, 245], textColor: [16, 185, 129], fontStyle: 'bold', fontSize: 9 },
     });
 
@@ -199,7 +199,7 @@ export function generateEventPDF(
         e.paidTo,
         e.purpose || '-',
         CATEGORY_LABELS[e.category]?.en || e.category,
-        formatCurrency(e.amount),
+        formatPDFCurrency(e.amount),
       ]),
       theme: 'grid',
       headStyles: {
@@ -211,7 +211,7 @@ export function generateEventPDF(
       bodyStyles: { fontSize: 8 },
       styles: { cellPadding: 3, overflow: 'linebreak' },
       margin: { left: margin, right: margin },
-      foot: [['', '', '', '', '', 'Total', formatCurrency(summary.totalSpent)]],
+      foot: [['', '', '', '', '', 'Total', formatPDFCurrency(summary.totalSpent)]],
       footStyles: { fillColor: [254, 242, 242], textColor: [239, 68, 68], fontStyle: 'bold', fontSize: 9 },
     });
 
@@ -246,7 +246,7 @@ export function generateEventPDF(
       head: [['Category', 'Amount', 'Transactions', 'Percentage']],
       body: categories.map((c) => [
         CATEGORY_LABELS[c.category]?.en || c.category,
-        formatCurrency(c.amount),
+        formatPDFCurrency(c.amount),
         c.count.toString(),
         `${c.percentage}%`,
       ]),
@@ -287,9 +287,9 @@ export function generateEventPDF(
       head: [['Person', 'Money Given', 'Money Received', 'Money Spent', 'Transactions']],
       body: people.map((p) => [
         p.name,
-        formatCurrency(p.moneyGiven),
-        formatCurrency(p.moneyReceived),
-        formatCurrency(p.moneySpent),
+        formatPDFCurrency(p.moneyGiven),
+        formatPDFCurrency(p.moneyReceived),
+        formatPDFCurrency(p.moneySpent),
         p.transactionCount.toString(),
       ]),
       theme: 'grid',
@@ -329,13 +329,13 @@ export function generateEventPDF(
   doc.setFontSize(9);
   doc.setTextColor(80);
   doc.setFont('helvetica', 'normal');
-  const balText = `Opening: ${formatCurrency(summary.openingBalance)}  +  Received: ${formatCurrency(summary.totalReceived)}  -  Spent: ${formatCurrency(summary.totalSpent)}`;
+  const balText = `Opening: ${formatPDFCurrency(summary.openingBalance)}  +  Received: ${formatPDFCurrency(summary.totalReceived)}  -  Spent: ${formatPDFCurrency(summary.totalSpent)}`;
   doc.text(balText, pageWidth / 2, y + 15, { align: 'center' });
 
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(summary.balance >= 0 ? 16 : 239, summary.balance >= 0 ? 185 : 68, summary.balance >= 0 ? 129 : 68);
-  doc.text(`Remaining: ${formatCurrency(summary.balance)}`, pageWidth / 2, y + 24, { align: 'center' });
+  doc.text(`Remaining: ${formatPDFCurrency(summary.balance)}`, pageWidth / 2, y + 24, { align: 'center' });
 
   // Add headers/footers to all pages
   const totalPages = doc.getNumberOfPages();

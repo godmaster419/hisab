@@ -44,6 +44,25 @@ export function formatCurrency(amount: number): string {
 }
 
 /**
+ * Currency format safe for PDF generation (Rs. 1,25,000) to avoid font encoding issues with ₹ symbol
+ */
+export function formatPDFCurrency(amount: number): string {
+  const isNegative = amount < 0;
+  const absAmount = Math.abs(amount);
+  const parts = absAmount.toString().split('.');
+  let intPart = parts[0];
+
+  if (intPart.length > 3) {
+    const last3 = intPart.slice(-3);
+    const remaining = intPart.slice(0, -3);
+    const groups = remaining.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+    intPart = groups + ',' + last3;
+  }
+
+  return `${isNegative ? '-' : ''}Rs. ${intPart}`;
+}
+
+/**
  * Format date to DD MMM YYYY
  */
 export function formatDate(dateString: string): string {
