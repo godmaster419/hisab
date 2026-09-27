@@ -160,7 +160,7 @@ export default function EventsPage() {
                         minWidth: 180, zIndex: 10, overflow: 'hidden',
                       }}>
                         <Link
-                          href={`/events/${event.id}`}
+                          href={`/events/detail?id=${event.id}`}
                           style={{
                             display: 'flex', alignItems: 'center', gap: 8,
                             padding: '10px 14px', color: 'var(--text-primary)',
@@ -171,7 +171,7 @@ export default function EventsPage() {
                           <Eye size={15} /> देखें / View
                         </Link>
                         <Link
-                          href={`/events/${event.id}/edit`}
+                          href={`/events/edit?id=${event.id}`}
                           style={{
                             display: 'flex', alignItems: 'center', gap: 8,
                             padding: '10px 14px', color: 'var(--text-primary)',
@@ -209,7 +209,7 @@ export default function EventsPage() {
                     )}
                   </div>
 
-                  <Link href={`/events/${event.id}`} style={{ textDecoration: 'none', display: 'block', padding: 20 }}>
+                  <Link href={`/events/detail?id=${event.id}`} style={{ textDecoration: 'none', display: 'block', padding: 20 }}>
                     <h3 style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6, paddingRight: 40 }}>
                       {event.name}
                     </h3>

@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, use } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import AppLayout from '@/components/AppLayout';
 import AddMoneyModal from '@/components/AddMoneyModal';
@@ -26,8 +26,9 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
 } from 'recharts';
 
-export default function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+function EventDetailContent() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get('id') || '';
   const router = useRouter();
   const { showToast } = useToast();
 
@@ -138,6 +139,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             <button className="btn btn-secondary btn-sm" onClick={handleExportExcel}>
               <FileSpreadsheet size={15} /> Excel
             </button>
+            <Link href={`/events/edit?id=${id}`} className="btn btn-secondary btn-sm">
+              <Edit size={15} /> इवेंट एडिट
+            </Link>
           </div>
         </div>
 
@@ -679,5 +683,19 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         />
       </div>
     </AppLayout>
+  );
+}
+
+export default function EventDetailPage() {
+  return (
+    <Suspense fallback={
+      <AppLayout>
+        <div className="page-container" style={{ textAlign: 'center', padding: '60px 20px' }}>
+          <p style={{ fontSize: 16, color: 'var(--text-secondary)' }}>लोड हो रहा है...</p>
+        </div>
+      </AppLayout>
+    }>
+      <EventDetailContent />
+    </Suspense>
   );
 }

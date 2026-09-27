@@ -214,7 +214,7 @@ export default function DashboardPage() {
                     return (
                       <Link
                         key={event.id}
-                        href={`/events/${event.id}`}
+                        href={`/events/detail?id=${event.id}`}
                         className="card card-interactive"
                         style={{ padding: '14px 16px', textDecoration: 'none', display: 'block' }}
                       >
@@ -270,7 +270,7 @@ export default function DashboardPage() {
                   {recentTxns.map((txn) => (
                     <Link
                       key={txn.id}
-                      href={`/events/${txn.eventId}`}
+                      href={`/events/detail?id=${txn.eventId}`}
                       style={{ textDecoration: 'none' }}
                     >
                       <div className="transaction-card" style={{ padding: '10px 14px' }}>

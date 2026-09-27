@@ -50,7 +50,7 @@ export default function NewEventPage() {
     });
 
     showToast('Event सफलतापूर्वक बनाया गया!');
-    router.push(`/events/${event.id}`);
+    router.push(`/events/detail?id=${event.id}`);
   };
 
   return (

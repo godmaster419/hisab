@@ -223,7 +223,7 @@ export default function ReportsPage() {
                         >
                           <Download size={14} />
                         </button>
-                        <Link href={`/events/${ev.id}`} className="btn btn-sm btn-ghost" title="View Event">
+                        <Link href={`/events/detail?id=${ev.id}`} className="btn btn-sm btn-ghost" title="View Event">
                           <BarChart3 size={14} />
                         </Link>
                       </div>

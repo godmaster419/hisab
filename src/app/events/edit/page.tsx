@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, use } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import AppLayout from '@/components/AppLayout';
 import { useToast } from '@/components/Toast';
 import { ArrowLeft, Save } from 'lucide-react';
 import { getEvent, updateEvent } from '@/store';
 
-export default function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+function EditEventContent() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get('id') || '';
   const router = useRouter();
   const { showToast } = useToast();
   const [form, setForm] = useState({
@@ -17,6 +18,10 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    if (!id) {
+      router.push('/events');
+      return;
+    }
     const event = getEvent(id);
     if (!event) { router.push('/events'); return; }
     setForm({
@@ -49,7 +54,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
       openingBalance: form.openingBalance ? Number(form.openingBalance) : 0,
     });
     showToast('Event सफलतापूर्वक अपडेट किया गया!');
-    router.push(`/events/${id}`);
+    router.push(`/events/detail?id=${id}`);
   };
 
   return (
@@ -104,5 +109,19 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         </div>
       </div>
     </AppLayout>
+  );
+}
+
+export default function EditEventPage() {
+  return (
+    <Suspense fallback={
+      <AppLayout>
+        <div className="page-container" style={{ textAlign: 'center', padding: '60px 20px' }}>
+          <p style={{ fontSize: 16, color: 'var(--text-secondary)' }}>लोड हो रहा है...</p>
+        </div>
+      </AppLayout>
+    }>
+      <EditEventContent />
+    </Suspense>
   );
 }
