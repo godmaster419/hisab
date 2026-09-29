@@ -542,11 +542,11 @@ export function generateHindiTestPDF() {
   doc.line(margin, y, pageWidth - margin, y);
   y += 10;
 
-  // Mixed text test
+  // English & Mixed text test
   doc.setFontSize(12);
   setFont(doc, 'bold');
   doc.setTextColor(30);
-  doc.text('मिश्रित पाठ परीक्षण / Mixed Text Test:', margin, y);
+  doc.text('अंग्रेज़ी शब्द व मिश्रित परीक्षण / English Words & Mixed Test:', margin, y);
   y += 8;
 
   doc.setFontSize(10);
@@ -555,11 +555,13 @@ export function generateHindiTestPDF() {
 
   const mixedTests = [
     'सुरेश कुमार ने ₹5,000 राजेश को दिए।',
+    'English Words: Annual Function 2026, Sound System, Stage Decoration, Catering',
+    'Mixed Sentence: Suresh Kumar (सुरेश) paid ₹5,000 for Sound System via UPI',
+    'Payment Modes: Cash / UPI (GPay, PhonePe, Paytm) / Net Banking / Bank Transfer',
+    'Alphabet (A-Z, a-z): ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz',
+    'Numbers & Symbols: 0123456789 • ₹1,25,000 • Bill #1042 • 100% Verified',
+    'Category: Food & Refreshment (सब्ज़ी, चावल, Ice Cream, Water Bottles)',
     'कुल आय: ₹20,000 — कुल खर्च: ₹12,500 — शेष: ₹7,500',
-    'Event विवरण: Annual Function 2026 — 25 Sep 2026',
-    'भुगतान: नकद / UPI / बैंक ट्रांसफर',
-    'श्रेणी: खाना, सजावट, यातायात, उपकरण, जलपान',
-    'तारीख: 25/09/2026 — राशि: ₹1,25,000',
   ];
 
   mixedTests.forEach((text) => {
@@ -573,7 +575,7 @@ export function generateHindiTestPDF() {
   doc.setFontSize(12);
   setFont(doc, 'bold');
   doc.setTextColor(30);
-  doc.text('मात्रा और संयुक्त अक्षर परीक्षण:', margin, y);
+  doc.text('मात्रा और संयुक्त अक्षर परीक्षण (Hindi Characters):', margin, y);
   y += 8;
 
   doc.setFontSize(10);
@@ -600,7 +602,7 @@ export function generateHindiTestPDF() {
   doc.setFontSize(16);
   setFont(doc, 'bold');
   doc.setTextColor(99, 102, 241);
-  doc.text('धन्यवाद', pageWidth / 2, y, { align: 'center' });
+  doc.text('धन्यवाद / Thank You', pageWidth / 2, y, { align: 'center' });
 
   return doc;
 }
