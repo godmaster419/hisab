@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import AppLayout from '@/components/AppLayout';
 import {
-  BarChart3, Download, FileSpreadsheet, Calendar, TrendingUp, TrendingDown, Wallet,
+  BarChart3, Download, FileSpreadsheet, Calendar, TrendingUp, TrendingDown, Wallet, Printer, FileText,
 } from 'lucide-react';
 import {
   getEvents, getEventSummary, getGlobalSummary, getCategorySummary, getAllExpenses,
@@ -12,7 +12,7 @@ import {
 } from '@/store';
 import { formatCurrency, formatDate, CATEGORY_LABELS, getCategoryColor } from '@/utils/helpers';
 import { HisabEvent } from '@/types';
-import { downloadEventPDF } from '@/utils/pdf';
+import { downloadEventPDF, printEventPDF, downloadHindiTestPDF } from '@/utils/pdf';
 import { exportEventExcel } from '@/utils/export';
 import { useToast } from '@/components/Toast';
 import {
@@ -60,9 +60,20 @@ export default function ReportsPage() {
   return (
     <AppLayout>
       <div className="page-container">
-        <div className="page-header">
-          <h1 className="page-title">📊 रिपोर्ट / Reports</h1>
-          <p className="page-subtitle">सभी Event का विश्लेषण एक जगह देखें</p>
+        <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <h1 className="page-title">📊 रिपोर्ट / Reports</h1>
+            <p className="page-subtitle">सभी Event का विश्लेषण और PDF रिपोर्ट डाउनलोड करें</p>
+          </div>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => {
+              downloadHindiTestPDF();
+              showToast('Hindi Test PDF डाउनलोड हो रहा है...');
+            }}
+          >
+            <FileText size={15} /> हिंदी PDF टेस्ट / Test PDF
+          </button>
         </div>
 
         {/* Event Filter */}
@@ -80,9 +91,9 @@ export default function ReportsPage() {
             ))}
           </select>
           {selectedEvent !== 'all' && (
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button
-                className="btn btn-sm btn-secondary"
+                className="btn btn-sm btn-primary"
                 onClick={() => {
                   const ev = events.find((e) => e.id === selectedEvent);
                   if (!ev) return;
@@ -90,7 +101,17 @@ export default function ReportsPage() {
                   showToast('PDF डाउनलोड हो रहा है...');
                 }}
               >
-                <Download size={14} /> PDF Download
+                <Download size={14} /> PDF डाउनलोड करें
+              </button>
+              <button
+                className="btn btn-sm btn-secondary"
+                onClick={() => {
+                  const ev = events.find((e) => e.id === selectedEvent);
+                  if (!ev) return;
+                  printEventPDF(ev, getMoneyReceivedByEvent(ev.id), getExpensesByEvent(ev.id));
+                }}
+              >
+                <Printer size={14} /> Print करें
               </button>
               <button
                 className="btn btn-sm btn-secondary"

@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { searchPeople } from '@/store';
+import { UserPlus } from 'lucide-react';
 
 interface AutocompleteInputProps {
   value: string;
@@ -10,6 +11,7 @@ interface AutocompleteInputProps {
   className?: string;
   id?: string;
   required?: boolean;
+  onAddNew?: () => void;
 }
 
 export default function AutocompleteInput({
@@ -19,6 +21,7 @@ export default function AutocompleteInput({
   className = 'form-input',
   id,
   required,
+  onAddNew,
 }: AutocompleteInputProps) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -39,7 +42,7 @@ export default function AutocompleteInput({
     onChange(val);
     const results = searchPeople(val);
     setSuggestions(results);
-    setShowDropdown(results.length > 0);
+    setShowDropdown(results.length > 0 || (onAddNew !== undefined));
     setActiveIndex(-1);
   };
 
@@ -52,13 +55,19 @@ export default function AutocompleteInput({
     if (!showDropdown) return;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setActiveIndex((prev) => Math.min(prev + 1, suggestions.length - 1));
+      const max = onAddNew ? suggestions.length : suggestions.length - 1;
+      setActiveIndex((prev) => Math.min(prev + 1, max));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setActiveIndex((prev) => Math.max(prev - 1, 0));
     } else if (e.key === 'Enter' && activeIndex >= 0) {
       e.preventDefault();
-      handleSelect(suggestions[activeIndex]);
+      if (activeIndex < suggestions.length) {
+        handleSelect(suggestions[activeIndex]);
+      } else if (onAddNew) {
+        onAddNew();
+        setShowDropdown(false);
+      }
     } else if (e.key === 'Escape') {
       setShowDropdown(false);
     }
@@ -78,7 +87,7 @@ export default function AutocompleteInput({
         required={required}
         autoComplete="off"
       />
-      {showDropdown && suggestions.length > 0 && (
+      {showDropdown && (suggestions.length > 0 || onAddNew) && (
         <div className="autocomplete-dropdown">
           {suggestions.map((name, index) => (
             <div
@@ -90,6 +99,27 @@ export default function AutocompleteInput({
               {name}
             </div>
           ))}
+          {onAddNew && (
+            <div
+              className={`autocomplete-item ${activeIndex === suggestions.length ? 'active' : ''}`}
+              onClick={() => {
+                onAddNew();
+                setShowDropdown(false);
+              }}
+              onMouseEnter={() => setActiveIndex(suggestions.length)}
+              style={{
+                borderTop: suggestions.length > 0 ? '1px solid var(--border-color)' : undefined,
+                color: 'var(--brand-primary)',
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <UserPlus size={14} />
+              + नया व्यक्ति जोड़ें / Add New Person
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -141,6 +141,16 @@ export default function EventsPage() {
                     </div>
                   )}
 
+                  {event.isDemo && (
+                    <div style={{
+                      position: 'absolute', top: 12, right: event.isArchived ? 120 : 52,
+                      background: 'rgba(245, 158, 11, 0.15)', color: '#d97706',
+                      padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600,
+                    }}>
+                      Demo Event
+                    </div>
+                  )}
+
                   {/* Menu */}
                   <div style={{ position: 'absolute', top: 12, right: 12 }}>
                     <button
@@ -258,8 +268,10 @@ export default function EventsPage() {
         {/* Delete Confirmation */}
         <ConfirmDialog
           isOpen={!!deleteConfirm}
-          title="Event हटाएँ?"
-          message="क्या आप वाकई इस Event और उसके सभी लेनदेन को हटाना चाहते हैं? यह कार्य पूर्ववत नहीं किया जा सकता।"
+          title="क्या आप इस Event को हटाना चाहते हैं?"
+          message="इस Event को हटाने पर इससे जुड़े सभी पैसे, खर्च, सामान और transactions भी हट जाएंगे। यह कार्रवाई वापस नहीं की जा सकती।"
+          confirmText="Delete Event"
+          cancelText="Cancel"
           onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
           onCancel={() => setDeleteConfirm(null)}
         />

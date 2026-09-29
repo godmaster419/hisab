@@ -44,7 +44,7 @@ export function formatCurrency(amount: number): string {
 }
 
 /**
- * Currency format safe for PDF generation (Rs. 1,25,000) to avoid font encoding issues with ₹ symbol
+ * Currency format for PDF generation — uses ₹ symbol (works with embedded Devanagari font)
  */
 export function formatPDFCurrency(amount: number): string {
   const isNegative = amount < 0;
@@ -59,7 +59,7 @@ export function formatPDFCurrency(amount: number): string {
     intPart = groups + ',' + last3;
   }
 
-  return `${isNegative ? '-' : ''}Rs. ${intPart}`;
+  return `${isNegative ? '-' : ''}₹${intPart}`;
 }
 
 /**

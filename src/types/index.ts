@@ -11,6 +11,7 @@ export interface HisabEvent {
   responsiblePerson: string;
   openingBalance: number;
   isArchived: boolean;
+  isDemo?: boolean; // Flag to identify demo/sample events
   createdAt: string;
   updatedAt: string;
 }
@@ -25,6 +26,7 @@ export interface MoneyReceived {
   purpose: string;
   paymentMethod: PaymentMethod;
   note: string;
+  isDemo?: boolean;
   createdAt: string;
 }
 
@@ -40,6 +42,7 @@ export interface Expense {
   paymentMethod: PaymentMethod;
   note: string;
   items: ExpenseItem[];
+  isDemo?: boolean;
   createdAt: string;
 }
 
@@ -50,6 +53,22 @@ export interface ExpenseItem {
   unit: string;
   rate: number;
   total: number;
+}
+
+// ============================================
+// PEOPLE MANAGEMENT
+// ============================================
+
+export interface HisabPerson {
+  id: string;
+  name: string;
+  mobile: string;
+  note: string;
+  status: 'active' | 'inactive';
+  eventIds: string[];
+  isDemo?: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Person {
@@ -119,6 +138,8 @@ export interface AppSettings {
   language: 'hi' | 'en' | 'both';
   currency: string;
   currencySymbol: string;
+  demoDataLoaded?: boolean;
+  demoDataDeleted?: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -126,6 +147,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   language: 'both',
   currency: 'INR',
   currencySymbol: '₹',
+  demoDataLoaded: false,
+  demoDataDeleted: false,
 };
 
 export const PAYMENT_METHODS: { value: PaymentMethod; label: string; labelHi: string }[] = [

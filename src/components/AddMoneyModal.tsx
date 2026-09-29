@@ -7,6 +7,7 @@ import { addMoneyReceived, updateMoneyReceived } from '@/store';
 import { getTodayDate } from '@/utils/helpers';
 import { useToast } from '@/components/Toast';
 import AutocompleteInput from '@/components/AutocompleteInput';
+import AddPersonModal from '@/components/AddPersonModal';
 
 interface AddMoneyModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export default function AddMoneyModal({ isOpen, onClose, eventId, editData, onSa
     note: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [addPersonFor, setAddPersonFor] = useState<'givenBy' | 'depositedWith' | null>(null);
 
   useEffect(() => {
     if (editData) {
@@ -100,6 +102,15 @@ export default function AddMoneyModal({ isOpen, onClose, eventId, editData, onSa
     onClose();
   };
 
+  const handlePersonAdded = (name: string) => {
+    if (addPersonFor === 'givenBy') {
+      setForm((prev) => ({ ...prev, givenBy: name }));
+    } else if (addPersonFor === 'depositedWith') {
+      setForm((prev) => ({ ...prev, depositedWith: name }));
+    }
+    setAddPersonFor(null);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -140,7 +151,8 @@ export default function AddMoneyModal({ isOpen, onClose, eventId, editData, onSa
               <AutocompleteInput
                 value={form.givenBy}
                 onChange={(val) => setForm({ ...form, givenBy: val })}
-                placeholder="जैसे: Suresh"
+                placeholder="जैसे: सुरेश कुमार"
+                onAddNew={() => setAddPersonFor('givenBy')}
               />
               {errors.givenBy && <div className="form-error">{errors.givenBy}</div>}
             </div>
@@ -151,7 +163,8 @@ export default function AddMoneyModal({ isOpen, onClose, eventId, editData, onSa
               <AutocompleteInput
                 value={form.depositedWith}
                 onChange={(val) => setForm({ ...form, depositedWith: val })}
-                placeholder="जैसे: Rajesh"
+                placeholder="जैसे: राजेश कुमार"
+                onAddNew={() => setAddPersonFor('depositedWith')}
               />
               {errors.depositedWith && <div className="form-error">{errors.depositedWith}</div>}
             </div>
@@ -228,6 +241,14 @@ export default function AddMoneyModal({ isOpen, onClose, eventId, editData, onSa
           </div>
         </form>
       </div>
+
+      {/* Inline Add Person Modal */}
+      <AddPersonModal
+        isOpen={!!addPersonFor}
+        onClose={() => setAddPersonFor(null)}
+        onPersonAdded={handlePersonAdded}
+        eventId={eventId}
+      />
     </div>
   );
 }

@@ -16,7 +16,7 @@ import {
 import {
   getEvent, getEventSummary, getMoneyReceivedByEvent, getExpensesByEvent,
   getTransactionHistory, getCategorySummary, getPersonSummary,
-  deleteMoneyReceived, deleteExpense,
+  deleteMoneyReceived, deleteExpense, deleteEvent,
 } from '@/store';
 import { formatCurrency, formatDate, CATEGORY_LABELS, PAYMENT_LABELS, getCategoryColor } from '@/utils/helpers';
 import { HisabEvent, MoneyReceived, Expense, ExpenseCategory } from '@/types';
@@ -42,6 +42,7 @@ function EventDetailContent() {
   const [editMoney, setEditMoney] = useState<MoneyReceived | null>(null);
   const [editExpense, setEditExpense] = useState<Expense | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'income' | 'expense'; id: string } | null>(null);
+  const [showDeleteEventConfirm, setShowDeleteEventConfirm] = useState(false);
 
   // Data
   const [money, setMoney] = useState<MoneyReceived[]>([]);
@@ -83,6 +84,13 @@ function EventDetailContent() {
     showToast('लेनदेन सफलतापूर्वक हटा दिया गया।');
   };
 
+  const handleDeleteEvent = () => {
+    deleteEvent(id);
+    setShowDeleteEventConfirm(false);
+    showToast('Event सफलतापूर्वक हटा दिया गया।');
+    router.push('/events');
+  };
+
   const handleDownloadPDF = () => {
     if (!event) return;
     downloadEventPDF(event, money, expenses);
@@ -116,7 +124,14 @@ function EventDetailContent() {
             <button className="btn btn-ghost btn-sm" onClick={() => router.push('/events')} style={{ marginBottom: 8 }}>
               <ArrowLeft size={16} /> Events
             </button>
-            <h1 className="page-title">{event.name}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
+              <h1 className="page-title" style={{ margin: 0 }}>{event.name}</h1>
+              {event.isDemo && (
+                <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 12, background: 'rgba(245, 158, 11, 0.15)', color: '#d97706', fontWeight: 600 }}>
+                  Demo Event
+                </span>
+              )}
+            </div>
             <p className="page-subtitle">
               📆 {formatDate(event.startDate)}
               {event.endDate && ` — ${formatDate(event.endDate)}`}
@@ -131,10 +146,10 @@ function EventDetailContent() {
               <ShoppingCart size={15} /> खर्च जोड़ें
             </button>
             <button className="btn btn-secondary btn-sm" onClick={handleDownloadPDF}>
-              <Download size={15} /> PDF
+              <Download size={15} /> PDF डाउनलोड करें
             </button>
             <button className="btn btn-secondary btn-sm" onClick={handlePrintPDF}>
-              <Printer size={15} /> Print
+              <Printer size={15} /> Print करें
             </button>
             <button className="btn btn-secondary btn-sm" onClick={handleExportExcel}>
               <FileSpreadsheet size={15} /> Excel
@@ -142,6 +157,13 @@ function EventDetailContent() {
             <Link href={`/events/edit?id=${id}`} className="btn btn-secondary btn-sm">
               <Edit size={15} /> इवेंट एडिट
             </Link>
+            <button
+              className="btn btn-sm btn-ghost"
+              style={{ color: 'var(--expense-color)', border: '1px solid var(--border-color)' }}
+              onClick={() => setShowDeleteEventConfirm(true)}
+            >
+              <Trash2 size={15} /> इवेंट हटाएँ / Delete
+            </button>
           </div>
         </div>
 
@@ -680,6 +702,16 @@ function EventDetailContent() {
           message="क्या आप वाकई इस लेनदेन को हटाना चाहते हैं? यह कार्य पूर्ववत नहीं किया जा सकता।"
           onConfirm={handleDeleteTransaction}
           onCancel={() => setDeleteConfirm(null)}
+        />
+
+        <ConfirmDialog
+          isOpen={showDeleteEventConfirm}
+          title="क्या आप इस Event को हटाना चाहते हैं?"
+          message="इस Event को हटाने पर इससे जुड़े सभी पैसे, खर्च, सामान और transactions भी हट जाएंगे। यह कार्रवाई वापस नहीं की जा सकती।"
+          confirmText="Delete Event"
+          cancelText="Cancel"
+          onConfirm={handleDeleteEvent}
+          onCancel={() => setShowDeleteEventConfirm(false)}
         />
       </div>
     </AppLayout>

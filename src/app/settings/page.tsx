@@ -6,10 +6,11 @@ import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import {
   Sun, Moon, Monitor, Download, Upload, Trash2, Save,
-  Globe, Database, Shield, Smartphone, CheckCircle,
+  Globe, Database, Shield, Smartphone, CheckCircle, FileText,
 } from 'lucide-react';
-import { getSettings, updateSettings, exportAllData, importData } from '@/store';
+import { getSettings, updateSettings, exportAllData, importData, hasDemoData, deleteDemoData } from '@/store';
 import { exportBackupJSON } from '@/utils/export';
+import { downloadHindiTestPDF } from '@/utils/pdf';
 import { AppSettings } from '@/types';
 
 export default function SettingsPage() {
@@ -20,10 +21,13 @@ export default function SettingsPage() {
     theme: 'light', language: 'both', currency: 'INR', currencySymbol: '₹',
   });
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showDemoConfirm, setShowDemoConfirm] = useState(false);
+  const [demoExists, setDemoExists] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     setSettings(getSettings());
+    setDemoExists(hasDemoData());
   }, []);
 
   const handleThemeChange = (theme: AppSettings['theme']) => {
@@ -70,6 +74,13 @@ export default function SettingsPage() {
     showToast('सभी डेटा हटा दिया गया। पेज रीलोड हो रहा है...');
     setShowClearConfirm(false);
     setTimeout(() => window.location.reload(), 1500);
+  };
+
+  const handleDeleteDemo = () => {
+    deleteDemoData();
+    setDemoExists(false);
+    setShowDemoConfirm(false);
+    showToast('सभी Demo Data सफलतापूर्वक हटा दिया गया।');
   };
 
   if (!mounted) return <AppLayout><div /></AppLayout>;
@@ -179,6 +190,60 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* Demo Data Management */}
+        <div className="card" style={{ padding: 24, marginBottom: 16 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <FileText size={18} /> डेमो डेटा / Demo Data
+          </h3>
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: 16, background: 'var(--bg-tertiary)', borderRadius: 12, flexWrap: 'wrap', gap: 12,
+          }}>
+            <div>
+              <p style={{ fontSize: 14, fontWeight: 500 }}>
+                {demoExists ? '⚠️ Demo Data मौजूद है (Demo Events Active)' : '✅ कोई Demo Data नहीं है (Clean Data)'}
+              </p>
+              <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                {demoExists
+                  ? 'सैंपल/डेमो इवेंट और लेनदेन को हटाएँ। आपके अपने बनाए Events सुरक्षित रहेंगे।'
+                  : 'सभी Demo Data हटाया जा चुका है और दोबारा लोड नहीं होगा।'}
+              </p>
+            </div>
+            {demoExists && (
+              <button className="btn btn-sm btn-expense" onClick={() => setShowDemoConfirm(true)}>
+                <Trash2 size={14} /> Delete All Demo Data
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Hindi PDF Test Section */}
+        <div className="card" style={{ padding: 24, marginBottom: 16 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Download size={18} /> हिंदी PDF परीक्षण / Hindi PDF Test
+          </h3>
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: 16, background: 'var(--bg-tertiary)', borderRadius: 12, flexWrap: 'wrap', gap: 12,
+          }}>
+            <div>
+              <p style={{ fontSize: 14, fontWeight: 500 }}>📄 Devanagari Unicode Font PDF Test</p>
+              <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                हिंदी मात्रा, संयुक्त अक्षर, ₹ सिंबल, मिश्रित टेक्स्ट और बहु-पृष्ठ लेआउट का सत्यापन करें
+              </p>
+            </div>
+            <button
+              className="btn btn-sm btn-primary"
+              onClick={() => {
+                downloadHindiTestPDF();
+                showToast('Test PDF डाउनलोड हो रहा है...');
+              }}
+            >
+              <Download size={14} /> Test PDF डाउनलोड करें
+            </button>
+          </div>
+        </div>
+
         {/* Security Info */}
         <div className="card" style={{ padding: 24, marginBottom: 16 }}>
           <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -238,6 +303,17 @@ export default function SettingsPage() {
           confirmText="हाँ, सब मिटाएँ"
           onConfirm={handleClearAll}
           onCancel={() => setShowClearConfirm(false)}
+        />
+
+        {/* Demo Delete Confirm */}
+        <ConfirmDialog
+          isOpen={showDemoConfirm}
+          title="सभी Demo Data हटाएँ?"
+          message="क्या आप वाकई सभी Demo Events और Demo डेटा हटाना चाहते हैं? आपके खुद के बनाए Events और डेटा सुरक्षित रहेंगे।"
+          confirmText="हाँ, Demo Data हटाएँ"
+          cancelText="रद्द करें / Cancel"
+          onConfirm={handleDeleteDemo}
+          onCancel={() => setShowDemoConfirm(false)}
         />
       </div>
     </AppLayout>

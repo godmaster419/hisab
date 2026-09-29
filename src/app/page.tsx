@@ -13,8 +13,15 @@ import {
   IndianRupee,
   ShoppingCart,
   BarChart3,
+  Trash2,
+  Sparkles,
 } from 'lucide-react';
-import { getGlobalSummary, getEvents, getRecentTransactions, loadSampleData, getCategorySummary, getEventSummary } from '@/store';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import { useToast } from '@/components/Toast';
+import {
+  getGlobalSummary, getEvents, getRecentTransactions, loadSampleData,
+  getCategorySummary, getEventSummary, hasDemoData, deleteDemoData,
+} from '@/store';
 import { formatCurrency, formatDate, CATEGORY_LABELS, getCategoryColor } from '@/utils/helpers';
 import { HisabEvent } from '@/types';
 import {
@@ -22,6 +29,7 @@ import {
 } from 'recharts';
 
 export default function DashboardPage() {
+  const { showToast } = useToast();
   const [mounted, setMounted] = useState(false);
   const [summary, setSummary] = useState({
     totalEvents: 0, activeEvents: 0, totalReceived: 0, totalSpent: 0, totalBalance: 0, totalOpening: 0,
@@ -29,6 +37,8 @@ export default function DashboardPage() {
   const [events, setEvents] = useState<HisabEvent[]>([]);
   const [recentTxns, setRecentTxns] = useState<ReturnType<typeof getRecentTransactions>>([]);
   const [chartData, setChartData] = useState<{ name: string; value: number }[]>([]);
+  const [demoActive, setDemoActive] = useState(false);
+  const [showDemoConfirm, setShowDemoConfirm] = useState(false);
 
   useEffect(() => {
     loadSampleData();
@@ -40,6 +50,7 @@ export default function DashboardPage() {
     setSummary(getGlobalSummary());
     setEvents(getEvents().filter((e) => !e.isArchived).slice(0, 4));
     setRecentTxns(getRecentTransactions(8));
+    setDemoActive(hasDemoData());
 
     // Get category data from all events
     const allEvents = getEvents();
@@ -56,6 +67,13 @@ export default function DashboardPage() {
         value,
       }))
     );
+  };
+
+  const handleDeleteDemo = () => {
+    deleteDemoData();
+    setShowDemoConfirm(false);
+    refreshData();
+    showToast('सभी Demo Data सफलतापूर्वक हटा दिया गया।');
   };
 
   if (!mounted) return <AppLayout><div /></AppLayout>;
@@ -76,6 +94,40 @@ export default function DashboardPage() {
             </Link>
           </div>
         </div>
+
+        {/* Demo Data Banner */}
+        {demoActive && (
+          <div
+            style={{
+              padding: '12px 18px',
+              marginBottom: 20,
+              borderRadius: 12,
+              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05))',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 12,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 8, background: '#f59e0b', color: 'white', fontWeight: 700 }}>
+                Demo Data
+              </span>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
+                यह सैंपल डेटा है। आप ऐप समझने के बाद इसे कभी भी एक क्लिक में हटा सकते हैं।
+              </p>
+            </div>
+            <button
+              className="btn btn-sm btn-ghost"
+              style={{ color: '#d97706', border: '1px solid rgba(245, 158, 11, 0.4)' }}
+              onClick={() => setShowDemoConfirm(true)}
+            >
+              <Trash2 size={14} /> Delete Demo Data
+            </button>
+          </div>
+        )}
 
         {/* Summary Cards */}
         <div className="grid-summary" style={{ marginBottom: 28 }}>
@@ -220,10 +272,17 @@ export default function DashboardPage() {
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                           <div>
-                            <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
-                              {event.name}
-                            </h4>
-                            <p style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                              <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+                                {event.name}
+                              </h4>
+                              {event.isDemo && (
+                                <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 6, background: 'rgba(245, 158, 11, 0.15)', color: '#d97706', fontWeight: 600 }}>
+                                  Demo
+                                </span>
+                              )}
+                            </div>
+                            <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 4 }}>
                               {formatDate(event.startDate)}
                             </p>
                           </div>
@@ -353,6 +412,17 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+
+        {/* Demo Delete Confirm */}
+        <ConfirmDialog
+          isOpen={showDemoConfirm}
+          title="सभी Demo Data हटाएँ?"
+          message="क्या आप वाकई सभी Demo Events और Demo डेटा हटाना चाहते हैं? आपके खुद के बनाए Events और डेटा सुरक्षित रहेंगे।"
+          confirmText="हाँ, Demo Data हटाएँ"
+          cancelText="रद्द करें / Cancel"
+          onConfirm={handleDeleteDemo}
+          onCancel={() => setShowDemoConfirm(false)}
+        />
 
         {/* Responsive: stack columns on mobile */}
         <style jsx>{`

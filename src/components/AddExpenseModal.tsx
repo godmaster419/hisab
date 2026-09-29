@@ -7,6 +7,7 @@ import { addExpense, updateExpense } from '@/store';
 import { getTodayDate, generateId } from '@/utils/helpers';
 import { useToast } from '@/components/Toast';
 import AutocompleteInput from '@/components/AutocompleteInput';
+import AddPersonModal from '@/components/AddPersonModal';
 
 interface AddExpenseModalProps {
   isOpen: boolean;
@@ -40,6 +41,7 @@ export default function AddExpenseModal({ isOpen, onClose, eventId, editData, on
   const [items, setItems] = useState<ExpenseItem[]>([]);
   const [showItems, setShowItems] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [addPersonFor, setAddPersonFor] = useState<'spentBy' | 'paidTo' | null>(null);
 
   useEffect(() => {
     if (editData) {
@@ -194,7 +196,8 @@ export default function AddExpenseModal({ isOpen, onClose, eventId, editData, on
                 <AutocompleteInput
                   value={form.spentBy}
                   onChange={(val) => setForm({ ...form, spentBy: val })}
-                  placeholder="जैसे: Rajesh"
+                  placeholder="जैसे: राजेश कुमार"
+                  onAddNew={() => setAddPersonFor('spentBy')}
                 />
                 {errors.spentBy && <div className="form-error">{errors.spentBy}</div>}
               </div>
@@ -205,7 +208,8 @@ export default function AddExpenseModal({ isOpen, onClose, eventId, editData, on
                 <AutocompleteInput
                   value={form.paidTo}
                   onChange={(val) => setForm({ ...form, paidTo: val })}
-                  placeholder="जैसे: Sharma Tent House"
+                  placeholder="जैसे: शर्मा टेंट हाउस"
+                  onAddNew={() => setAddPersonFor('paidTo')}
                 />
                 {errors.paidTo && <div className="form-error">{errors.paidTo}</div>}
               </div>
@@ -405,6 +409,21 @@ export default function AddExpenseModal({ isOpen, onClose, eventId, editData, on
           </div>
         </form>
       </div>
+
+      {/* Inline Add Person Modal */}
+      <AddPersonModal
+        isOpen={!!addPersonFor}
+        onClose={() => setAddPersonFor(null)}
+        onPersonAdded={(name) => {
+          if (addPersonFor === 'spentBy') {
+            setForm((prev) => ({ ...prev, spentBy: name }));
+          } else if (addPersonFor === 'paidTo') {
+            setForm((prev) => ({ ...prev, paidTo: name }));
+          }
+          setAddPersonFor(null);
+        }}
+        eventId={eventId}
+      />
     </div>
   );
 }
