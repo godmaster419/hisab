@@ -726,23 +726,35 @@ export function generateEventReportHTML(
     `;
   }).join('');
 
+  const reportTitle = `HISAB_${sanitizeFilename(event.name)}_Report`;
+
   return `<!DOCTYPE html>
 <html lang="hi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HISAB - ${escapeHtml(event.name.replace(' (Demo)', ''))} - रिपोर्ट</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <title>${escapeHtml(event.name.replace(' (Demo)', ''))} - HISAB रिपोर्ट</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
+    @font-face {
+      font-family: 'NotoSansDevanagari';
+      src: url('data:font/ttf;base64,${NotoSansDevanagariRegular}') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'NotoSansDevanagari';
+      src: url('data:font/ttf;base64,${NotoSansDevanagariBold}') format('truetype');
+      font-weight: 700;
+      font-style: normal;
+    }
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+      font-family: 'NotoSansDevanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
     body {
-      font-family: 'Noto Sans Devanagari', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: #f8fafc;
       color: #0f172a;
       line-height: 1.5;
@@ -794,7 +806,7 @@ export function generateEventReportHTML(
     .btn {
       padding: 8px 18px;
       border-radius: 8px;
-      font-weight: 600;
+      font-weight: 700;
       font-size: 13px;
       cursor: pointer;
       border: none;
@@ -803,6 +815,13 @@ export function generateEventReportHTML(
       gap: 6px;
       transition: all 0.15s ease;
       font-family: inherit;
+    }
+    .btn-download {
+      background: #10b981;
+      color: #ffffff;
+    }
+    .btn-download:hover {
+      background: #059669;
     }
     .btn-print {
       background: #6366f1;
@@ -861,7 +880,7 @@ export function generateEventReportHTML(
     .brand-text p {
       font-size: 12px;
       color: #6366f1;
-      font-weight: 600;
+      font-weight: 700;
       margin-top: 2px;
     }
     .report-meta {
@@ -873,7 +892,7 @@ export function generateEventReportHTML(
       display: inline-block;
       padding: 3px 10px;
       border-radius: 999px;
-      font-weight: 600;
+      font-weight: 700;
       font-size: 11px;
       margin-bottom: 4px;
       background: ${statusBg};
@@ -926,7 +945,7 @@ export function generateEventReportHTML(
     .summary-card.balance { border-top: 3px solid #4f46e5; background: #eef2ff; }
     .summary-label {
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 700;
       color: #64748b;
       margin-bottom: 4px;
     }
@@ -946,7 +965,7 @@ export function generateEventReportHTML(
       padding: 10px 16px;
       text-align: center;
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 700;
       color: #334155;
       margin-bottom: 24px;
       border: 1px dashed #cbd5e1;
@@ -966,7 +985,7 @@ export function generateEventReportHTML(
     }
     .section-title .count-badge {
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 700;
       color: #64748b;
       background: #f1f5f9;
       padding: 2px 8px;
@@ -1006,7 +1025,7 @@ export function generateEventReportHTML(
       padding: 2px 6px;
       border-radius: 4px;
       font-size: 10px;
-      font-weight: 600;
+      font-weight: 700;
       background: #f1f5f9;
       color: #475569;
     }
@@ -1101,18 +1120,19 @@ export function generateEventReportHTML(
   <!-- Screen Toolbar -->
   <div class="no-print report-toolbar">
     <div class="toolbar-info">
-      <div class="toolbar-title">📄 HISAB — किताब जैसी शुद्ध हिंदी PDF रिपोर्ट / Print Preview</div>
+      <div class="toolbar-title">📄 HISAB — किताब जैसी शुद्ध हिंदी PDF रिपोर्ट / Report Preview</div>
       <div class="toolbar-hint">
-        💡 <strong>PDF डाउनलोड / सेव करने के लिए:</strong> प्रिंट विंडो में <em>'Destination'</em> में <strong>'Save as PDF' (या 'पीडीएफ के रूप में सेव करें')</strong> चुनें।
+        💡 <strong>PDF के लिए:</strong> नीचे <strong>'सीधा PDF डाउनलोड करें'</strong> दबाएं या प्रिंट विंडो में <em>'Destination'</em> में <strong>'Save as PDF'</strong> चुनें।
       </div>
     </div>
     <div class="toolbar-actions">
-      <button class="btn btn-print" onclick="window.print()">🖨️ PDF सेव करें / प्रिंट करें</button>
+      <button id="btnDirectDownload" class="btn btn-download" onclick="downloadPdfDirect()">📥 सीधा PDF डाउनलोड करें</button>
+      <button class="btn btn-print" onclick="window.print()">🖨️ प्रिंट / Save as PDF</button>
       <button class="btn btn-close" onclick="window.close()">✕ बंद करें</button>
     </div>
   </div>
 
-  <div class="report-wrap">
+  <div class="report-wrap" id="reportContent">
     <!-- Brand Header -->
     <div class="brand-header">
       <div class="brand-logo-box">
@@ -1302,6 +1322,90 @@ export function generateEventReportHTML(
     </div>
   </div>
 
+  <script>
+    async function downloadPdfDirect() {
+      const btn = document.getElementById('btnDirectDownload');
+      if (btn) btn.innerText = 'डाउनलोड हो रहा है...';
+
+      try {
+        const element = document.getElementById('reportContent');
+        const width = element.offsetWidth;
+        const height = element.offsetHeight;
+        const html = element.outerHTML;
+
+        const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '">' +
+          '<foreignObject width="100%" height="100%">' +
+            '<div xmlns="http://www.w3.org/1999/xhtml">' +
+              html +
+            '</div>' +
+          '</foreignObject>' +
+        '</svg>';
+
+        const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const scale = 2;
+          canvas.width = width * scale;
+          canvas.height = height * scale;
+          const ctx = canvas.getContext('2d');
+          ctx.scale(scale, scale);
+          ctx.drawImage(img, 0, 0);
+
+          const imgData = canvas.toDataURL('image/jpeg', 0.95);
+          const { jsPDF } = window.jspdf;
+          const pdf = new jsPDF('p', 'mm', 'a4');
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = (height * pdfWidth) / width;
+          const pageHeightMm = pdf.internal.pageSize.getHeight();
+
+          let position = 0;
+          let remainingHeight = pdfHeight;
+
+          pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST');
+          remainingHeight -= pageHeightMm;
+
+          while (remainingHeight > 0) {
+            position -= pageHeightMm;
+            pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST');
+            remainingHeight -= pageHeightMm;
+          }
+
+          pdf.save('${reportTitle}.pdf');
+          if (btn) btn.innerText = '📥 सीधा PDF डाउनलोड करें';
+          URL.revokeObjectURL(url);
+        };
+
+        img.onerror = function() {
+          window.print();
+          if (btn) btn.innerText = '📥 सीधा PDF डाउनलोड करें';
+        };
+
+        img.src = url;
+      } catch (err) {
+        console.error('Direct download error, falling back to print:', err);
+        window.print();
+        if (btn) btn.innerText = '📥 सीधा PDF डाउनलोड करें';
+      }
+    }
+
+    window.onload = function() {
+      if (document.fonts) {
+        document.fonts.ready.then(function() {
+          setTimeout(function() {
+            window.print();
+          }, 300);
+        });
+      } else {
+        setTimeout(function() {
+          window.print();
+        }, 500);
+      }
+    };
+  </script>
 </body>
 </html>`;
 }
@@ -1325,13 +1429,27 @@ export function generateHindiTestHTML(): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HISAB - हिंदी फॉन्ट व संयुक्ताक्षर शुद्धता सत्यापन (Devanagari Hindi Typography Test)</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    @font-face {
+      font-family: 'NotoSansDevanagari';
+      src: url('data:font/ttf;base64,${NotoSansDevanagariRegular}') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'NotoSansDevanagari';
+      src: url('data:font/ttf;base64,${NotoSansDevanagariBold}') format('truetype');
+      font-weight: 700;
+      font-style: normal;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'NotoSansDevanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
     body {
-      font-family: 'Noto Sans Devanagari', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: #f8fafc;
       color: #0f172a;
       line-height: 1.6;
@@ -1360,12 +1478,14 @@ export function generateHindiTestHTML(): string {
     .btn {
       padding: 8px 18px;
       border-radius: 8px;
-      font-weight: 600;
+      font-weight: 700;
       font-size: 13px;
       cursor: pointer;
       border: none;
       font-family: inherit;
     }
+    .btn-download { background: #10b981; color: #ffffff; }
+    .btn-download:hover { background: #059669; }
     .btn-print { background: #6366f1; color: #ffffff; }
     .btn-print:hover { background: #4f46e5; }
     .btn-close { background: rgba(255,255,255,0.15); color: #ffffff; }
@@ -1395,7 +1515,7 @@ export function generateHindiTestHTML(): string {
       display: inline-block;
     }
     .brand-title { font-size: 22px; font-weight: 800; color: #1e1b4b; }
-    .brand-sub { font-size: 13px; color: #6366f1; font-weight: 600; }
+    .brand-sub { font-size: 13px; color: #6366f1; font-weight: 700; }
     .test-box {
       background: #f8fafc;
       border: 1px solid #e2e8f0;
@@ -1458,16 +1578,17 @@ export function generateHindiTestHTML(): string {
     <div class="toolbar-info">
       <div class="toolbar-title">📄 HISAB — हिंदी फॉन्ट व संयुक्ताक्षर टेस्ट (Book-Quality Hindi Test)</div>
       <div class="toolbar-hint">
-        💡 <strong>PDF डाउनलोड / सेव करने के लिए:</strong> प्रिंट विंडो में <em>'Destination'</em> में <strong>'Save as PDF' (या 'पीडीएफ के रूप में सेव करें')</strong> चुनें।
+        💡 <strong>PDF के लिए:</strong> नीचे <strong>'सीधा PDF डाउनलोड करें'</strong> दबाएं या प्रिंट विंडो में <em>'Destination'</em> में <strong>'Save as PDF'</strong> चुनें।
       </div>
     </div>
     <div class="toolbar-actions">
-      <button class="btn btn-print" onclick="window.print()">🖨️ PDF सेव करें / प्रिंट करें</button>
+      <button id="btnDirectDownload" class="btn btn-download" onclick="downloadPdfDirect()">📥 सीधा PDF डाउनलोड करें</button>
+      <button class="btn btn-print" onclick="window.print()">🖨️ प्रिंट / Save as PDF</button>
       <button class="btn btn-close" onclick="window.close()">✕ बंद करें</button>
     </div>
   </div>
 
-  <div class="report-wrap">
+  <div class="report-wrap" id="reportContent">
     <div class="brand-header">
       <div>
         <div class="brand-badge">HISAB</div>
@@ -1567,6 +1688,90 @@ export function generateHindiTestHTML(): string {
     </div>
   </div>
 
+  <script>
+    async function downloadPdfDirect() {
+      const btn = document.getElementById('btnDirectDownload');
+      if (btn) btn.innerText = 'डाउनलोड हो रहा है...';
+
+      try {
+        const element = document.getElementById('reportContent');
+        const width = element.offsetWidth;
+        const height = element.offsetHeight;
+        const html = element.outerHTML;
+
+        const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '">' +
+          '<foreignObject width="100%" height="100%">' +
+            '<div xmlns="http://www.w3.org/1999/xhtml">' +
+              html +
+            '</div>' +
+          '</foreignObject>' +
+        '</svg>';
+
+        const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const scale = 2;
+          canvas.width = width * scale;
+          canvas.height = height * scale;
+          const ctx = canvas.getContext('2d');
+          ctx.scale(scale, scale);
+          ctx.drawImage(img, 0, 0);
+
+          const imgData = canvas.toDataURL('image/jpeg', 0.95);
+          const { jsPDF } = window.jspdf;
+          const pdf = new jsPDF('p', 'mm', 'a4');
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = (height * pdfWidth) / width;
+          const pageHeightMm = pdf.internal.pageSize.getHeight();
+
+          let position = 0;
+          let remainingHeight = pdfHeight;
+
+          pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST');
+          remainingHeight -= pageHeightMm;
+
+          while (remainingHeight > 0) {
+            position -= pageHeightMm;
+            pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST');
+            remainingHeight -= pageHeightMm;
+          }
+
+          pdf.save('HISAB_Hindi_Typography_Verification_Test.pdf');
+          if (btn) btn.innerText = '📥 सीधा PDF डाउनलोड करें';
+          URL.revokeObjectURL(url);
+        };
+
+        img.onerror = function() {
+          window.print();
+          if (btn) btn.innerText = '📥 सीधा PDF डाउनलोड करें';
+        };
+
+        img.src = url;
+      } catch (err) {
+        console.error('Direct download error, falling back to print:', err);
+        window.print();
+        if (btn) btn.innerText = '📥 सीधा PDF डाउनलोड करें';
+      }
+    }
+
+    window.onload = function() {
+      if (document.fonts) {
+        document.fonts.ready.then(function() {
+          setTimeout(function() {
+            window.print();
+          }, 300);
+        });
+      } else {
+        setTimeout(function() {
+          window.print();
+        }, 500);
+      }
+    };
+  </script>
 </body>
 </html>`;
 }
@@ -1599,17 +1804,6 @@ export function openPrintReport(html: string, title: string, autoPrint = true): 
     printWindow.document.write(html);
     printWindow.document.close();
     printWindow.document.title = title;
-
-    if (autoPrint) {
-      setTimeout(() => {
-        try {
-          printWindow?.focus();
-          printWindow?.print();
-        } catch (err) {
-          console.error('Print dialog failed', err);
-        }
-      }, 500);
-    }
   } else {
     // Hidden iframe fallback if popup blocked
     const iframe = document.createElement('iframe');
@@ -1633,7 +1827,7 @@ export function openPrintReport(html: string, title: string, autoPrint = true): 
           if (iframe.parentNode) {
             document.body.removeChild(iframe);
           }
-        }, 3000);
+        }, 5000);
       }, 500);
     }
   }
@@ -1655,4 +1849,5 @@ export function downloadHindiTestPDF(): void {
   const html = generateHindiTestHTML();
   openPrintReport(html, 'HISAB_Hindi_Typography_Verification_Test', true);
 }
+
 
