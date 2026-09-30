@@ -94,7 +94,7 @@ function EventDetailContent() {
   const handleDownloadPDF = () => {
     if (!event) return;
     downloadEventPDF(event, money, expenses);
-    showToast('PDF डाउनलोड हो रहा है...');
+    showToast('PDF रिपोर्ट तैयार है — "Save as PDF" चुनकर सेव करें');
   };
 
   const handlePrintPDF = () => {

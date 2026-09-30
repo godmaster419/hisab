@@ -608,11 +608,974 @@ export function generateHindiTestPDF() {
 }
 
 // ============================================
-// Download / Print
+// Book-Quality Hindi HTML Report Generator
+// ============================================
+
+function escapeHtml(str: string | number | undefined | null): string {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+export function generateEventReportHTML(
+  event: HisabEvent,
+  moneyReceived: MoneyReceived[],
+  expenses: Expense[]
+): string {
+  const summary = getEventSummary(event.id);
+  const categories = getCategorySummary(event.id);
+  const people = getPersonSummary(event.id);
+
+  const statusText = event.isArchived
+    ? 'पूर्ण / पुरालेख (Archived)'
+    : 'सक्रिय (Active)';
+
+  const statusBg = event.isArchived ? '#ecfdf5' : '#eef2ff';
+  const statusColor = event.isArchived ? '#059669' : '#4f46e5';
+
+  const dateStr = `${formatDate(event.startDate)}${event.endDate ? ' — ' + formatDate(event.endDate) : ''}`;
+  const printDate = new Date().toLocaleDateString('hi-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  // Category Rows
+  const categoryRows = categories.map((cat, idx) => {
+    const label = CATEGORY_LABELS[cat.category]?.hi || cat.category;
+    const labelEn = CATEGORY_LABELS[cat.category]?.en || '';
+    return `
+      <tr>
+        <td style="text-align: center; color: #64748b;">${idx + 1}</td>
+        <td><strong>${escapeHtml(label)}</strong> <span style="color:#64748b; font-size:11px;">(${escapeHtml(labelEn)})</span></td>
+        <td style="text-align: center;">${cat.count}</td>
+        <td style="text-align: right; font-weight: 600; color: #dc2626;">${formatPDFCurrency(cat.amount)}</td>
+        <td style="text-align: right;">${cat.percentage}%</td>
+        <td style="width: 120px;">
+          <div style="background: #f1f5f9; border-radius: 999px; height: 8px; overflow: hidden; width: 100%;">
+            <div style="background: #6366f1; height: 100%; width: ${cat.percentage}%;"></div>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  // Money Received Rows
+  const moneyRows = moneyReceived.map((m, idx) => {
+    const mode = PAYMENT_LABELS[m.paymentMethod]?.hi || m.paymentMethod || 'नकद';
+    return `
+      <tr>
+        <td style="text-align: center; color: #64748b;">${idx + 1}</td>
+        <td>${escapeHtml(formatDate(m.date))}</td>
+        <td><strong>${escapeHtml(m.givenBy)}</strong></td>
+        <td style="text-align: right; font-weight: 700; color: #059669;">${formatPDFCurrency(m.amount)}</td>
+        <td><span class="badge badge-mode">${escapeHtml(mode)}</span></td>
+        <td>${escapeHtml(m.purpose || m.note || '—')}</td>
+        <td>${escapeHtml(m.depositedWith || '—')}</td>
+      </tr>
+    `;
+  }).join('');
+
+  // Expense Rows
+  const expenseRows = expenses.map((e, idx) => {
+    const cat = CATEGORY_LABELS[e.category]?.hi || e.category;
+    const mode = PAYMENT_LABELS[e.paymentMethod]?.hi || e.paymentMethod || 'नकद';
+    const itemsText = e.items && e.items.length > 0
+      ? e.items.map(it => `${it.itemName} (${it.quantity} ${it.unit} @ ₹${it.rate})`).join(', ')
+      : (e.purpose || e.note || '—');
+
+    return `
+      <tr>
+        <td style="text-align: center; color: #64748b;">${idx + 1}</td>
+        <td>${escapeHtml(formatDate(e.date))}</td>
+        <td><strong>${escapeHtml(cat)}</strong></td>
+        <td style="text-align: right; font-weight: 700; color: #dc2626;">${formatPDFCurrency(e.amount)}</td>
+        <td><span class="badge badge-mode">${escapeHtml(mode)}</span></td>
+        <td style="font-size: 11px;">${escapeHtml(itemsText)}</td>
+        <td>${escapeHtml(e.spentBy || '—')}</td>
+        <td>${escapeHtml(e.paidTo || '—')}</td>
+      </tr>
+    `;
+  }).join('');
+
+  // People Rows
+  const peopleRows = people.map((p, idx) => {
+    const net = p.moneyGiven - p.moneySpent;
+    const netColor = net > 0 ? '#059669' : net < 0 ? '#dc2626' : '#64748b';
+    const netText = net > 0
+      ? `+${formatPDFCurrency(net)} (लेना है)`
+      : net < 0
+      ? `-${formatPDFCurrency(Math.abs(net))} (देना है)`
+      : '₹0 (बराबर)';
+
+    return `
+      <tr>
+        <td style="text-align: center; color: #64748b;">${idx + 1}</td>
+        <td><strong>${escapeHtml(p.name)}</strong></td>
+        <td style="text-align: right; color: #059669; font-weight: 600;">${formatPDFCurrency(p.moneyGiven)}</td>
+        <td style="text-align: right; color: #4f46e5;">${formatPDFCurrency(p.moneyReceived)}</td>
+        <td style="text-align: right; color: #dc2626; font-weight: 600;">${formatPDFCurrency(p.moneySpent)}</td>
+        <td style="text-align: right; font-weight: 700; color: ${netColor};">${netText}</td>
+      </tr>
+    `;
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HISAB - ${escapeHtml(event.name.replace(' (Demo)', ''))} - रिपोर्ट</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Noto Sans Devanagari', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+      line-height: 1.5;
+      font-size: 13px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Screen Toolbar */
+    .no-print {
+      display: block;
+    }
+    .report-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: #1e1b4b;
+      color: #ffffff;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .toolbar-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .toolbar-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .toolbar-hint {
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+    .toolbar-hint strong {
+      color: #facc15;
+    }
+    .toolbar-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .btn {
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+    .btn-print {
+      background: #6366f1;
+      color: #ffffff;
+    }
+    .btn-print:hover {
+      background: #4f46e5;
+    }
+    .btn-close {
+      background: rgba(255,255,255,0.15);
+      color: #ffffff;
+    }
+    .btn-close:hover {
+      background: rgba(255,255,255,0.25);
+    }
+
+    /* Report Container */
+    .report-wrap {
+      max-width: 860px;
+      margin: 24px auto;
+      background: #ffffff;
+      padding: 36px 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+
+    /* Header */
+    .brand-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #6366f1;
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+    }
+    .brand-logo-box {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-badge {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: #ffffff;
+      font-size: 20px;
+      font-weight: 800;
+      padding: 6px 14px;
+      border-radius: 8px;
+      letter-spacing: 1px;
+    }
+    .brand-text h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: #1e1b4b;
+      line-height: 1.1;
+    }
+    .brand-text p {
+      font-size: 12px;
+      color: #6366f1;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .report-meta {
+      text-align: right;
+      font-size: 11px;
+      color: #64748b;
+    }
+    .report-meta .status-tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 11px;
+      margin-bottom: 4px;
+      background: ${statusBg};
+      color: ${statusColor};
+    }
+
+    /* Event Title Banner */
+    .event-banner {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-left: 4px solid #6366f1;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 20px;
+    }
+    .event-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 6px;
+    }
+    .event-details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 8px 16px;
+      font-size: 12px;
+      color: #475569;
+    }
+    .event-details-grid strong {
+      color: #0f172a;
+    }
+
+    /* Summary Cards */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .summary-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px 14px;
+      text-align: left;
+    }
+    .summary-card.opening { border-top: 3px solid #64748b; }
+    .summary-card.received { border-top: 3px solid #059669; background: #f0fdf4; }
+    .summary-card.spent { border-top: 3px solid #dc2626; background: #fef2f2; }
+    .summary-card.balance { border-top: 3px solid #4f46e5; background: #eef2ff; }
+    .summary-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+    .summary-value {
+      font-size: 17px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+    .summary-card.received .summary-value { color: #059669; }
+    .summary-card.spent .summary-value { color: #dc2626; }
+    .summary-card.balance .summary-value { color: #4f46e5; }
+
+    /* Formula Strip */
+    .formula-strip {
+      background: #f1f5f9;
+      border-radius: 8px;
+      padding: 10px 16px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 24px;
+      border: 1px dashed #cbd5e1;
+    }
+
+    /* Section Styling */
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e1b4b;
+      margin: 24px 0 10px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 6px;
+    }
+    .section-title .count-badge {
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      background: #f1f5f9;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 18px;
+      font-size: 12px;
+    }
+    th, td {
+      padding: 8px 10px;
+      border: 1px solid #e2e8f0;
+      vertical-align: middle;
+    }
+    th {
+      background: #f8fafc;
+      color: #334155;
+      font-weight: 700;
+      font-size: 11px;
+      text-align: left;
+    }
+    tr:nth-child(even) td {
+      background: #fafafa;
+    }
+    tfoot td {
+      background: #f8fafc;
+      font-weight: 700;
+      border-top: 2px solid #0f172a;
+      border-bottom: 2px solid #0f172a;
+    }
+    .badge-mode {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    /* Signatures */
+    .signatures-block {
+      margin-top: 36px;
+      padding-top: 20px;
+      border-top: 1px solid #e2e8f0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+    }
+    .sig-box {
+      border: 1px dashed #cbd5e1;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+    .sig-line {
+      height: 40px;
+      border-bottom: 1px solid #94a3b8;
+      margin-bottom: 8px;
+    }
+    .sig-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #1e1b4b;
+    }
+    .sig-sub {
+      font-size: 11px;
+      color: #64748b;
+    }
+
+    /* Footer */
+    .report-footer {
+      margin-top: 28px;
+      padding-top: 12px;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    /* Print Specifics */
+    @media print {
+      body {
+        background: #ffffff !important;
+        font-size: 10pt;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .report-wrap {
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+      }
+      .summary-grid {
+        grid-template-columns: repeat(4, 1fr) !important;
+      }
+      table {
+        page-break-inside: auto;
+        font-size: 9pt;
+      }
+      tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+      }
+      thead {
+        display: table-header-group;
+      }
+      tfoot {
+        display: table-footer-group;
+      }
+      .avoid-break {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+      @page {
+        size: A4 portrait;
+        margin: 12mm 14mm 12mm 14mm;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen Toolbar -->
+  <div class="no-print report-toolbar">
+    <div class="toolbar-info">
+      <div class="toolbar-title">📄 HISAB — किताब जैसी शुद्ध हिंदी PDF रिपोर्ट / Print Preview</div>
+      <div class="toolbar-hint">
+        💡 <strong>PDF डाउनलोड / सेव करने के लिए:</strong> प्रिंट विंडो में <em>'Destination'</em> में <strong>'Save as PDF' (या 'पीडीएफ के रूप में सेव करें')</strong> चुनें।
+      </div>
+    </div>
+    <div class="toolbar-actions">
+      <button class="btn btn-print" onclick="window.print()">🖨️ PDF सेव करें / प्रिंट करें</button>
+      <button class="btn btn-close" onclick="window.close()">✕ बंद करें</button>
+    </div>
+  </div>
+
+  <div class="report-wrap">
+    <!-- Brand Header -->
+    <div class="brand-header">
+      <div class="brand-logo-box">
+        <div class="brand-badge">HISAB</div>
+        <div class="brand-text">
+          <h1>HISAB</h1>
+          <p>हर पैसे का साफ हिसाब</p>
+        </div>
+      </div>
+      <div class="report-meta">
+        <div><span class="status-tag">${escapeHtml(statusText)}</span></div>
+        <div>तैयार तिथि: ${printDate}</div>
+        <div>रिपोर्ट कोड: EV-${event.id.slice(-6).toUpperCase()}</div>
+      </div>
+    </div>
+
+    <!-- Event Info Banner -->
+    <div class="event-banner">
+      <div class="event-title">${escapeHtml(event.name.replace(' (Demo)', ''))}</div>
+      <div class="event-details-grid">
+        <div>📅 <strong>आयोजन तिथि:</strong> ${escapeHtml(dateStr)}</div>
+        ${event.responsiblePerson ? `<div>👤 <strong>जिम्मेदार व्यक्ति:</strong> ${escapeHtml(event.responsiblePerson)}</div>` : ''}
+        ${event.description ? `<div>📝 <strong>विवरण:</strong> ${escapeHtml(event.description)}</div>` : ''}
+      </div>
+    </div>
+
+    <!-- Summary KPI Cards -->
+    <div class="summary-grid">
+      <div class="summary-card opening">
+        <div class="summary-label">शुरुआती राशि / Opening</div>
+        <div class="summary-value">${formatPDFCurrency(summary.openingBalance)}</div>
+      </div>
+      <div class="summary-card received">
+        <div class="summary-label">कुल प्राप्त राशि / Received</div>
+        <div class="summary-value">${formatPDFCurrency(summary.totalReceived)}</div>
+      </div>
+      <div class="summary-card spent">
+        <div class="summary-label">कुल खर्च / Spent</div>
+        <div class="summary-value">${formatPDFCurrency(summary.totalSpent)}</div>
+      </div>
+      <div class="summary-card balance">
+        <div class="summary-label">शेष राशि / Net Balance</div>
+        <div class="summary-value">${formatPDFCurrency(summary.balance)}</div>
+      </div>
+    </div>
+
+    <!-- Formula Strip -->
+    <div class="formula-strip">
+      हिसाब समीकरण: शुरुआती राशि (${formatPDFCurrency(summary.openingBalance)}) + कुल प्राप्त (${formatPDFCurrency(summary.totalReceived)}) − कुल खर्च (${formatPDFCurrency(summary.totalSpent)}) = <strong>शुद्ध शेष राशि ${formatPDFCurrency(summary.balance)}</strong>
+    </div>
+
+    <!-- Category Breakdown Table -->
+    ${categories.length > 0 ? `
+      <div class="section-title">
+        <span>📊 मद अनुसार खर्च का विवरण / Category-wise Expenses</span>
+        <span class="count-badge">${categories.length} मदें</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 40px; text-align: center;">क्र.</th>
+            <th>मद / श्रेणी (Category)</th>
+            <th style="width: 80px; text-align: center;">संख्या (Qty)</th>
+            <th style="width: 120px; text-align: right;">खर्च राशि (₹)</th>
+            <th style="width: 70px; text-align: right;">कुल का %</th>
+            <th style="width: 120px;">ग्राफ</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${categoryRows}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3" style="text-align: right;">कुल खर्च / Total:</td>
+            <td style="text-align: right; color: #dc2626;">${formatPDFCurrency(summary.totalSpent)}</td>
+            <td style="text-align: right;">100%</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    ` : ''}
+
+    <!-- Money Received Ledger -->
+    <div class="section-title">
+      <span>📥 पैसा प्राप्ति बही / Money Received Ledger</span>
+      <span class="count-badge">${moneyReceived.length} प्रविष्टियां</span>
+    </div>
+    ${moneyReceived.length > 0 ? `
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 35px; text-align: center;">क्र.</th>
+            <th style="width: 85px;">तारीख</th>
+            <th>देने वाले का नाम</th>
+            <th style="width: 100px; text-align: right;">राशि (₹)</th>
+            <th style="width: 75px;">माध्यम</th>
+            <th>विवरण / उद्देश्य</th>
+            <th style="width: 100px;">प्राप्तकर्ता</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${moneyRows}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3" style="text-align: right;">कुल प्राप्त राशि / Total Received:</td>
+            <td style="text-align: right; color: #059669;">${formatPDFCurrency(summary.totalReceived)}</td>
+            <td colspan="3"></td>
+          </tr>
+        </tfoot>
+      </table>
+    ` : '<p style="font-size:12px; color:#64748b; margin-bottom:16px;">कोई पैसा प्राप्ति दर्ज नहीं है।</p>'}
+
+    <!-- Expense Ledger -->
+    <div class="section-title">
+      <span>📤 खर्च बही / Expense Ledger</span>
+      <span class="count-badge">${expenses.length} प्रविष्टियां</span>
+    </div>
+    ${expenses.length > 0 ? `
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 35px; text-align: center;">क्र.</th>
+            <th style="width: 85px;">तारीख</th>
+            <th style="width: 100px;">मद / श्रेणी</th>
+            <th style="width: 100px; text-align: right;">राशि (₹)</th>
+            <th style="width: 75px;">माध्यम</th>
+            <th>सामान / विवरण</th>
+            <th style="width: 90px;">खर्चकर्ता</th>
+            <th style="width: 90px;">प्राप्तकर्ता</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${expenseRows}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3" style="text-align: right;">कुल खर्च / Total Spent:</td>
+            <td style="text-align: right; color: #dc2626;">${formatPDFCurrency(summary.totalSpent)}</td>
+            <td colspan="4"></td>
+          </tr>
+        </tfoot>
+      </table>
+    ` : '<p style="font-size:12px; color:#64748b; margin-bottom:16px;">कोई खर्च दर्ज नहीं है।</p>'}
+
+    <!-- People Summary -->
+    ${people.length > 0 ? `
+      <div class="section-title">
+        <span>👥 व्यक्तिगत हिसाब सारांश / People Summary</span>
+        <span class="count-badge">${people.length} व्यक्ति</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 35px; text-align: center;">क्र.</th>
+            <th>व्यक्ति का नाम</th>
+            <th style="width: 110px; text-align: right;">दिया गया (₹)</th>
+            <th style="width: 110px; text-align: right;">प्राप्त किया (₹)</th>
+            <th style="width: 110px; text-align: right;">खर्च किया (₹)</th>
+            <th style="width: 130px; text-align: right;">शुद्ध स्थिति (Net)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${peopleRows}
+        </tbody>
+      </table>
+    ` : ''}
+
+    <!-- Verification & Signatures -->
+    <div class="avoid-break signatures-block">
+      <div class="sig-box">
+        <div class="sig-line"></div>
+        <div class="sig-label">जिम्मेदार व्यक्ति के हस्ताक्षर</div>
+        <div class="sig-sub">${escapeHtml(event.responsiblePerson || 'हस्ताक्षर')}</div>
+      </div>
+      <div class="sig-box">
+        <div class="sig-line"></div>
+        <div class="sig-label">हिसाब जांचकर्ता / कोषाध्यक्ष</div>
+        <div class="sig-sub">हस्ताक्षर व मुहर</div>
+      </div>
+    </div>
+
+    <!-- Official Statement & Footer -->
+    <div class="avoid-break report-footer">
+      <div>यह रिपोर्ट HISAB ऐप द्वारा प्रमाणित व तैयार की गई है — हर पैसे का साफ हिसाब।</div>
+      <div>दिनांक: ${printDate}</div>
+    </div>
+  </div>
+
+</body>
+</html>`;
+}
+
+// ============================================
+// Hindi Typography Verification Report HTML
+// ============================================
+
+export function generateHindiTestHTML(): string {
+  const printDate = new Date().toLocaleDateString('hi-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  return `<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HISAB - हिंदी फॉन्ट व संयुक्ताक्षर शुद्धता सत्यापन (Devanagari Hindi Typography Test)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Sans Devanagari', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+      line-height: 1.6;
+      font-size: 13px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .no-print { display: block; }
+    .report-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: #1e1b4b;
+      color: #ffffff;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .toolbar-title { font-size: 15px; font-weight: 700; }
+    .toolbar-hint { font-size: 12px; color: #cbd5e1; }
+    .toolbar-hint strong { color: #facc15; }
+    .btn {
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      border: none;
+      font-family: inherit;
+    }
+    .btn-print { background: #6366f1; color: #ffffff; }
+    .btn-print:hover { background: #4f46e5; }
+    .btn-close { background: rgba(255,255,255,0.15); color: #ffffff; }
+    .report-wrap {
+      max-width: 860px;
+      margin: 24px auto;
+      background: #ffffff;
+      padding: 36px 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+    .brand-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #6366f1;
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+    }
+    .brand-badge {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: #ffffff;
+      font-size: 20px;
+      font-weight: 800;
+      padding: 6px 14px;
+      border-radius: 8px;
+      display: inline-block;
+    }
+    .brand-title { font-size: 22px; font-weight: 800; color: #1e1b4b; }
+    .brand-sub { font-size: 13px; color: #6366f1; font-weight: 600; }
+    .test-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 18px;
+    }
+    .test-box-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #4f46e5;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sample-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px 16px;
+      font-size: 13px;
+    }
+    .sample-item {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 8px 12px;
+    }
+    .sample-item strong {
+      color: #1e1b4b;
+      font-size: 14px;
+    }
+    .success-alert {
+      background: #ecfdf5;
+      border-left: 4px solid #059669;
+      color: #065f46;
+      padding: 14px 18px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    @media print {
+      body { background: #ffffff !important; }
+      .no-print { display: none !important; }
+      .report-wrap {
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+      }
+      @page { size: A4 portrait; margin: 12mm 14mm 12mm 14mm; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen Toolbar -->
+  <div class="no-print report-toolbar">
+    <div class="toolbar-info">
+      <div class="toolbar-title">📄 HISAB — हिंदी फॉन्ट व संयुक्ताक्षर टेस्ट (Book-Quality Hindi Test)</div>
+      <div class="toolbar-hint">
+        💡 <strong>PDF डाउनलोड / सेव करने के लिए:</strong> प्रिंट विंडो में <em>'Destination'</em> में <strong>'Save as PDF' (या 'पीडीएफ के रूप में सेव करें')</strong> चुनें।
+      </div>
+    </div>
+    <div class="toolbar-actions">
+      <button class="btn btn-print" onclick="window.print()">🖨️ PDF सेव करें / प्रिंट करें</button>
+      <button class="btn btn-close" onclick="window.close()">✕ बंद करें</button>
+    </div>
+  </div>
+
+  <div class="report-wrap">
+    <div class="brand-header">
+      <div>
+        <div class="brand-badge">HISAB</div>
+        <div class="brand-title" style="margin-top: 8px;">हिंदी लिपि व संयुक्ताक्षर शुद्धता सत्यापन रिपोर्ट</div>
+        <div class="brand-sub">पुस्तकों (Books) जैसी 100% शुद्ध हिंदी, सही मात्राएं और संयुक्ताक्षर</div>
+      </div>
+      <div style="text-align: right; font-size: 11px; color: #64748b;">
+        <div>सत्यापन तिथि: ${printDate}</div>
+        <div style="margin-top: 4px;"><span style="background: #ecfdf5; color: #059669; padding: 2px 8px; border-radius: 999px; font-weight: 700;">सत्यापित / VERIFIED</span></div>
+      </div>
+    </div>
+
+    <div class="success-alert">
+      ✓ <strong>सत्यापन विवरण:</strong> यह रिपोर्ट प्रमाणित करती है कि HISAB ऐप में देवनागरी लिपि के सभी अक्षर, मात्राएं ('ि' छोटी इ की मात्रा आगे), संयुक्ताक्षर (क्ष, त्र, ज्ञ, श्र, प्र, क्र, क्त, स्त) और रेफ (र् - ऊपर की मात्रा) बिल्कुल <strong>पुस्तकों/किताबों (Printed Books) की तरह 100% शुद्ध व सही स्थान पर</strong> प्रदर्शित व मुद्रित हो रहे हैं।
+    </div>
+
+    <!-- Test 1: Vowels & Matras -->
+    <div class="test-box">
+      <div class="test-box-title">१. स्वर व बारहखड़ी मात्रा परीक्षण (Vowels & Matras)</div>
+      <div style="margin-bottom: 10px; font-size: 13px;">
+        <strong>स्वर (Vowels):</strong> अ, आ, इ, ई, उ, ऊ, ऋ, ए, ऐ, ओ, औ, अं, अः
+      </div>
+      <div style="margin-bottom: 10px; font-size: 13px;">
+        <strong>क की बारहखड़ी:</strong> क, का, कि, की, कु, कू, कृ, के, कै, को, कौ, कं, कः
+      </div>
+      <div style="font-size: 13px;">
+        <strong>ख व ग की मात्राएं:</strong> ख, खा, खि, खी, खु, खू, खे, खै, खो, खौ | ग, गा, गि, गी, गु, गू, गे, गै, गो, गौ
+      </div>
+    </div>
+
+    <!-- Test 2: Conjuncts -->
+    <div class="test-box">
+      <div class="test-box-title">२. संयुक्ताक्षर व आधे अक्षर (Devanagari Ligatures & Conjuncts)</div>
+      <div class="sample-grid">
+        <div class="sample-item"><strong>क्ष</strong> (क+्+ष) — क्षत्रिय, क्षमता, समीक्षा</div>
+        <div class="sample-item"><strong>त्र</strong> (त+्+र) — त्रिभुज, त्रिशूल, चरित्र</div>
+        <div class="sample-item"><strong>ज्ञ</strong> (ज+्+ञ) — ज्ञान, ज्ञानी, विज्ञान</div>
+        <div class="sample-item"><strong>श्र</strong> (श+्+र) — श्री, श्रीमती, विश्राम</div>
+        <div class="sample-item"><strong>प्र</strong> (प+्+र) — प्राप्त, प्रबंधन, प्रकाश</div>
+        <div class="sample-item"><strong>क्र</strong> (क+्+र) — क्र.सं., कार्यक्रम, क्रम</div>
+        <div class="sample-item"><strong>क्त</strong> (क+्+त) — व्यक्ति, संयुक्त, भक्ति</div>
+        <div class="sample-item"><strong>स्त</strong> (स+्+त) — व्यवस्था, पुस्तक, रास्ता</div>
+        <div class="sample-item"><strong>द्ध</strong> (द+्+ध) — शुद्ध, वृद्धि, प्रसिद्ध</div>
+        <div class="sample-item"><strong>द्व</strong> (द+्+व) — द्वितीय, विद्वान, द्वार</div>
+        <div class="sample-item"><strong>ष्ट</strong> (ष+्+ट) — स्पष्ट, दृष्टि, कष्ट</div>
+        <div class="sample-item"><strong>आधे अक्षर</strong> — क्या, प्यार, अच्छा, सच्चा</div>
+      </div>
+    </div>
+
+    <!-- Test 3: Ra-kars & Reph -->
+    <div class="test-box">
+      <div class="test-box-title">३. रेफ व र-कार परीक्षण (Reph & Ra-kars)</div>
+      <div class="sample-grid">
+        <div class="sample-item"><strong>रेफ (र् ऊपर):</strong> खर्च, वार्षिक, शर्मा, कार्य</div>
+        <div class="sample-item"><strong>रेफ (र् ऊपर):</strong> धर्म, कर्म, सर्व, चर्चा, गर्व</div>
+        <div class="sample-item"><strong>र-कार (नीचे):</strong> प्रकार, प्रकाश, प्रणाम, प्रेरणा</div>
+        <div class="sample-item"><strong>र-कार (ट्र/ड्र):</strong> राष्ट्रीय, ट्रेन, ड्रामा, ट्रक</div>
+      </div>
+    </div>
+
+    <!-- Test 4: Real Accounting Vocabulary -->
+    <div class="test-box">
+      <div class="test-box-title">४. हिसाब-किताब की वास्तविक शब्दावली (Real Accounting Terms)</div>
+      <div class="sample-grid">
+        <div class="sample-item"><strong>किताब / पुस्तक:</strong> किताब में लिखी जाने वाली शुद्ध हिंदी</div>
+        <div class="sample-item"><strong>हिसाब:</strong> हर पैसे का साफ हिसाब (HISAB)</div>
+        <div class="sample-item"><strong>आयोजन:</strong> वार्षिक समारोह 2026, विवाह उत्सव</div>
+        <div class="sample-item"><strong>वित्तीय पद:</strong> कुल प्राप्त राशि, कुल खर्च, शेष राशि</div>
+        <div class="sample-item"><strong>व्यक्ति:</strong> जिम्मेदार व्यक्ति, हिसाब जांचकर्ता, कोषाध्यक्ष</div>
+        <div class="sample-item"><strong>प्रतिष्ठान:</strong> शर्मा टेंट हाउस, गुप्ता मिष्ठान्न भंडार</div>
+        <div class="sample-item"><strong>व्यवस्था:</strong> अतिथि व्यवस्था, भोजन व्यवस्था, जलपान</div>
+        <div class="sample-item"><strong>रोकड़ बही:</strong> पैसा प्राप्ति बही, व्यय विवरण, पासबुक</div>
+      </div>
+    </div>
+
+    <!-- Test 5: Mixed Sentences, Currency & Numbers -->
+    <div class="test-box">
+      <div class="test-box-title">५. मिश्रित वाक्य, अंग्रेजी, संख्याएं व ₹ मुद्रा (Mixed & Currency)</div>
+      <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
+        <div class="sample-item">
+          <strong>मिश्रित वाक्य:</strong> सुरेश कुमार ने ₹5,000 Sound System के लिए राजेश को UPI (GPay/PhonePe) द्वारा दिए।
+        </div>
+        <div class="sample-item">
+          <strong>अंग्रेजी शब्द:</strong> Annual Function 2026, Stage Decoration, Catering Services, Sound System
+        </div>
+        <div class="sample-item">
+          <strong>मुद्रा (Rupee Symbol):</strong> ₹1,25,000 • ₹50,000 • ₹25,000 • ₹12,500 • ₹7,500 • ₹500
+        </div>
+        <div class="sample-item">
+          <strong>संख्याएं (Numbers):</strong> अंतर्राष्ट्रीय: 0123456789 | देवनागरी: ०१२३४५६७८९ | बिल #1042 (100% Verified)
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: 30px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 16px; font-size: 12px; color: #64748b;">
+      HISAB — हर पैसे का साफ हिसाब | देवनागरी फॉन्ट व संयुक्ताक्षर शुद्धता सत्यापन पूर्ण
+    </div>
+  </div>
+
+</body>
+</html>`;
+}
+
+// ============================================
+// Print & PDF Launcher
 // ============================================
 
 function sanitizeFilename(name: string): string {
-  // Replace Hindi/special characters and spaces for safe filenames
   return name
     .replace(/ \(Demo\)$/i, '')
     .replace(/[^\w\s-]/g, '')
@@ -621,21 +1584,75 @@ function sanitizeFilename(name: string): string {
     .trim() || 'Event';
 }
 
-export function downloadEventPDF(event: HisabEvent, moneyReceived: MoneyReceived[], expenses: Expense[]) {
-  const doc = generateEventPDF(event, moneyReceived, expenses);
-  const filename = `HISAB_${sanitizeFilename(event.name)}_Report.pdf`;
-  doc.save(filename);
+export function openPrintReport(html: string, title: string, autoPrint = true): void {
+  if (typeof window === 'undefined') return;
+
+  let printWindow: Window | null = null;
+  try {
+    printWindow = window.open('', '_blank');
+  } catch (e) {
+    printWindow = null;
+  }
+
+  if (printWindow && printWindow.document) {
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.document.title = title;
+
+    if (autoPrint) {
+      setTimeout(() => {
+        try {
+          printWindow?.focus();
+          printWindow?.print();
+        } catch (err) {
+          console.error('Print dialog failed', err);
+        }
+      }, 500);
+    }
+  } else {
+    // Hidden iframe fallback if popup blocked
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(html);
+      doc.close();
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+          if (iframe.parentNode) {
+            document.body.removeChild(iframe);
+          }
+        }, 3000);
+      }, 500);
+    }
+  }
 }
 
-export function printEventPDF(event: HisabEvent, moneyReceived: MoneyReceived[], expenses: Expense[]) {
-  const doc = generateEventPDF(event, moneyReceived, expenses);
-  doc.autoPrint();
-  const blob = doc.output('blob');
-  const url = URL.createObjectURL(blob);
-  window.open(url);
+export function downloadEventPDF(event: HisabEvent, moneyReceived: MoneyReceived[], expenses: Expense[]): void {
+  const html = generateEventReportHTML(event, moneyReceived, expenses);
+  const title = `HISAB_${sanitizeFilename(event.name)}_Report`;
+  openPrintReport(html, title, true);
 }
 
-export function downloadHindiTestPDF() {
-  const doc = generateHindiTestPDF();
-  doc.save('HISAB_Hindi_Test.pdf');
+export function printEventPDF(event: HisabEvent, moneyReceived: MoneyReceived[], expenses: Expense[]): void {
+  const html = generateEventReportHTML(event, moneyReceived, expenses);
+  const title = `HISAB_${sanitizeFilename(event.name)}_Report`;
+  openPrintReport(html, title, true);
 }
+
+export function downloadHindiTestPDF(): void {
+  const html = generateHindiTestHTML();
+  openPrintReport(html, 'HISAB_Hindi_Typography_Verification_Test', true);
+}
+

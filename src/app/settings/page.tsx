@@ -236,7 +236,7 @@ export default function SettingsPage() {
               className="btn btn-sm btn-primary"
               onClick={() => {
                 downloadHindiTestPDF();
-                showToast('Test PDF डाउनलोड हो रहा है...');
+                showToast('Test PDF तैयार है — प्रिंट विंडो में "Save as PDF" चुनें');
               }}
             >
               <Download size={14} /> Test PDF डाउनलोड करें

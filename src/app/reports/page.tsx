@@ -69,7 +69,7 @@ export default function ReportsPage() {
             className="btn btn-secondary btn-sm"
             onClick={() => {
               downloadHindiTestPDF();
-              showToast('Hindi Test PDF डाउनलोड हो रहा है...');
+              showToast('Hindi Test PDF तैयार है — प्रिंट विंडो में "Save as PDF" चुनें');
             }}
           >
             <FileText size={15} /> हिंदी PDF टेस्ट / Test PDF
@@ -98,7 +98,7 @@ export default function ReportsPage() {
                   const ev = events.find((e) => e.id === selectedEvent);
                   if (!ev) return;
                   downloadEventPDF(ev, getMoneyReceivedByEvent(ev.id), getExpensesByEvent(ev.id));
-                  showToast('PDF डाउनलोड हो रहा है...');
+                  showToast('PDF रिपोर्ट तैयार है — "Save as PDF" चुनकर सेव करें');
                 }}
               >
                 <Download size={14} /> PDF डाउनलोड करें
@@ -238,7 +238,7 @@ export default function ReportsPage() {
                           className="btn btn-sm btn-ghost"
                           onClick={() => {
                             downloadEventPDF(ev, getMoneyReceivedByEvent(ev.id), getExpensesByEvent(ev.id));
-                            showToast('PDF डाउनलोड हो रहा है...');
+                            showToast('PDF रिपोर्ट तैयार है — "Save as PDF" चुनकर सेव करें');
                           }}
                           title="Download PDF"
                         >
