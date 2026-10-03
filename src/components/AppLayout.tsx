@@ -24,7 +24,15 @@ interface AppLayoutProps {
   children: React.ReactNode;
 }
 
-const sidebarLinks = [
+interface NavItem {
+  href: string;
+  label: string;
+  labelHi?: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  isSpecial?: boolean;
+}
+
+const sidebarLinks: NavItem[] = [
   { href: '/', label: 'Dashboard', labelHi: 'डैशबोर्ड', icon: LayoutDashboard },
   { href: '/contributions', label: 'Contributions', labelHi: 'कंट्रीब्यूशन', icon: Coins },
   { href: '/events', label: 'Events', labelHi: 'इवेंट', icon: Calendar },
@@ -33,10 +41,10 @@ const sidebarLinks = [
   { href: '/settings', label: 'Settings', labelHi: 'सेटिंग्स', icon: Settings },
 ];
 
-const bottomNavLinks = [
+const bottomNavLinks: NavItem[] = [
   { href: '/', label: 'होम', icon: Home },
   { href: '/contributions', label: 'कंट्रीब्यूशन', icon: Coins },
-  { href: '/events', label: 'इवेंट', icon: Calendar },
+  { href: '/events/new', label: 'नया', icon: Plus, isSpecial: true },
   { href: '/reports', label: 'रिपोर्ट', icon: FileText },
   { href: '/settings', label: 'सेटिंग', icon: Settings },
 ];
