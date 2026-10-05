@@ -13,13 +13,18 @@ import {
   ArrowLeft, Plus, IndianRupee, ShoppingCart, Download, Printer,
   Edit, Trash2, Eye, MoreVertical, FileText, FileSpreadsheet, AlertTriangle,
   Users, BarChart3, Clock, TrendingUp, TrendingDown, Wallet, RefreshCw,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import {
   getEvent, getEventSummary, getMoneyReceivedByEvent, getExpensesByEvent,
   getTransactionHistory, getCategorySummary, getPersonSummary, getPeople,
   deleteMoneyReceived, deleteExpense, deleteEvent,
 } from '@/store';
-import { formatCurrency, formatDate, CATEGORY_LABELS, PAYMENT_LABELS, getCategoryColor } from '@/utils/helpers';
+import {
+  formatCurrency, formatDate, CATEGORY_LABELS, PAYMENT_LABELS, getCategoryColor,
+  getContributionMonths, getMonthContributionMembers, getPreviousMonthsUnpaid,
+  getCurrentMonthStr, formatHindiMonth, getPreviousMonthStr, getNextMonthStr,
+} from '@/utils/helpers';
 import { HisabEvent, HisabEventType, MoneyReceived, Expense, ExpenseCategory, getEventTypeConfig } from '@/types';
 import { downloadEventPDF, printEventPDF } from '@/utils/pdf';
 import { exportMoneyReceivedCSV, exportExpensesCSV, exportEventExcel } from '@/utils/export';
@@ -45,6 +50,11 @@ function EventDetailContent() {
   const [editExpense, setEditExpense] = useState<Expense | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'income' | 'expense'; id: string } | null>(null);
   const [showDeleteEventConfirm, setShowDeleteEventConfirm] = useState(false);
+
+  // Month-wise contribution state
+  const [selectedContributionMonth, setSelectedContributionMonth] = useState('');
+  const [showOnlyPendingInPrevMonth, setShowOnlyPendingInPrevMonth] = useState(true);
+  const [addMoneyDefaults, setAddMoneyDefaults] = useState<{ givenBy?: string; date?: string; purpose?: string } | null>(null);
 
   // Data
   const [money, setMoney] = useState<MoneyReceived[]>([]);
@@ -127,56 +137,56 @@ function EventDetailContent() {
   const isDukandar = event.eventType === 'dukandar_diary';
   const isContribution = event.eventType === 'contribution';
 
-  // For contribution events: compute full checklist of added members
-  const contributionMembers = (() => {
-    if (!isContribution) return [];
-    const registeredPeople = getPeople();
-    const map = new Map<string, {
-      name: string;
-      mobile: string;
-      totalContributed: number;
-      hasContributed: boolean;
-      transactions: MoneyReceived[];
-    }>();
+  const handleOpenAddContributionForMember = (memberName: string, monthStr: string) => {
+    setEditMoney(null);
+    setAddMoneyDefaults({
+      givenBy: memberName,
+      date: `${monthStr}-05`,
+      purpose: `${formatHindiMonth(monthStr)} मासिक अंशदान`,
+    });
+    setShowAddMoney(true);
+  };
 
-    registeredPeople.forEach(p => {
-      const key = p.name.trim().toLowerCase();
-      map.set(key, {
-        name: p.name.trim(),
-        mobile: p.mobile ? p.mobile.trim() : '',
-        totalContributed: 0,
-        hasContributed: false,
-        transactions: [],
+  const handleOpenGeneralAddMoney = () => {
+    setEditMoney(null);
+    if (isContribution) {
+      const activeM = activeContributionMonth;
+      setAddMoneyDefaults({
+        date: `${activeM}-05`,
+        purpose: `${formatHindiMonth(activeM)} मासिक अंशदान`,
       });
-    });
+    } else {
+      setAddMoneyDefaults(null);
+    }
+    setShowAddMoney(true);
+  };
 
-    money.forEach(m => {
-      const key = m.givenBy.trim().toLowerCase();
-      let mem = map.get(key);
-      if (!mem) {
-        mem = {
-          name: m.givenBy.trim(),
-          mobile: '',
-          totalContributed: 0,
-          hasContributed: false,
-          transactions: [],
-        };
-        map.set(key, mem);
-      }
-      mem.totalContributed += m.amount;
-      mem.hasContributed = true;
-      mem.transactions.push(m);
-    });
+  // Month-wise contribution calculations
+  const contributionMonths = event ? getContributionMonths(event, money, expenses) : [getCurrentMonthStr()];
+  const currentMonthStr = getCurrentMonthStr();
+  const activeContributionMonth = selectedContributionMonth || (contributionMonths[0] || currentMonthStr);
+  const isSelectedPreviousMonth = activeContributionMonth < currentMonthStr;
 
-    return Array.from(map.values()).sort((a, b) => {
-      if (a.hasContributed && !b.hasContributed) return -1;
-      if (!a.hasContributed && b.hasContributed) return 1;
-      return a.name.localeCompare(b.name, 'hi');
-    });
-  })();
+  const registeredPeople = getPeople();
+  const currentMonthContributionMembers = isContribution
+    ? getMonthContributionMembers(money, activeContributionMonth, registeredPeople)
+    : [];
 
-  const paidMembersCount = contributionMembers.filter(m => m.hasContributed).length;
-  const pendingMembersCount = contributionMembers.filter(m => !m.hasContributed).length;
+  const prevMonthsUnpaidList = isContribution
+    ? getPreviousMonthsUnpaid(contributionMonths, currentMonthStr, money, registeredPeople)
+    : [];
+
+  // "previous month ka jo baki rahe usi ka name dikhe"
+  // "current month me sabka dikhe aur status dikhe"
+  const displayedContributionMembers = isContribution
+    ? (isSelectedPreviousMonth && showOnlyPendingInPrevMonth
+        ? currentMonthContributionMembers.filter(m => !m.hasContributed)
+        : currentMonthContributionMembers)
+    : [];
+
+  const paidMembersCount = currentMonthContributionMembers.filter(m => m.hasContributed).length;
+  const pendingMembersCount = currentMonthContributionMembers.filter(m => !m.hasContributed).length;
+  const monthTotalCollected = currentMonthContributionMembers.reduce((sum, m) => sum + m.totalContributed, 0);
 
   return (
     <AppLayout>
@@ -226,7 +236,7 @@ function EventDetailContent() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button className="btn btn-income btn-sm" onClick={() => { setEditMoney(null); setShowAddMoney(true); }}>
+            <button className="btn btn-income btn-sm" onClick={handleOpenGeneralAddMoney}>
               <IndianRupee size={15} /> {isDukandar ? '+ जमा मिला (Payment)' : isContribution ? '+ अंशदान मिला' : '+ पैसा जोड़ें'}
             </button>
             <button className="btn btn-expense btn-sm" onClick={() => { setEditExpense(null); setShowAddExpense(true); }}>
@@ -701,7 +711,75 @@ function EventDetailContent() {
             </h3>
             {isContribution ? (
               <div>
-                {/* Contribution Summary Stats */}
+                {/* Month Switcher Toolbar for Contribution Event */}
+                <div style={{
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 12,
+                  padding: '12px 16px',
+                  marginBottom: 18,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: 12,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)' }}>
+                      📅 माह चुनें / Month:
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedContributionMonth(getPreviousMonthStr(activeContributionMonth))}
+                        className="btn btn-ghost btn-sm"
+                        style={{ padding: '4px 8px' }}
+                        title="पिछला माह"
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+                      <select
+                        value={activeContributionMonth}
+                        onChange={(e) => setSelectedContributionMonth(e.target.value)}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: 8,
+                          border: '1.5px solid var(--brand-primary)',
+                          background: 'var(--bg-primary)',
+                          color: 'var(--text-primary)',
+                          fontWeight: 700,
+                          fontSize: 13,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {contributionMonths.map((m) => (
+                          <option key={m} value={m}>
+                            {formatHindiMonth(m)} {m === currentMonthStr ? '⭐ (चालू माह / Current Month)' : ' (पिछला माह)'}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedContributionMonth(getNextMonthStr(activeContributionMonth))}
+                        className="btn btn-ghost btn-sm"
+                        style={{ padding: '4px 8px' }}
+                        title="अगला माह"
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    className="btn btn-income btn-sm"
+                    onClick={handleOpenGeneralAddMoney}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                  >
+                    <Plus size={15} /> + {formatHindiMonth(activeContributionMonth)} का अंशदान जोड़ें
+                  </button>
+                </div>
+
+                {/* Contribution Summary Stats for Active Month */}
                 <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
                   <div style={{
                     padding: '8px 16px',
@@ -730,41 +808,105 @@ function EventDetailContent() {
                     border: '1px solid rgba(99, 102, 241, 0.25)',
                     display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--brand-primary)', fontWeight: 600,
                   }}>
-                    <span>💰 कुल अंशदान संग्रह: <strong>{formatCurrency(summary.totalReceived)}</strong></span>
+                    <span>💰 {formatHindiMonth(activeContributionMonth)} संग्रह: <strong>{formatCurrency(monthTotalCollected)}</strong></span>
                   </div>
+                  {prevMonthsUnpaidList.length > 0 && (
+                    <div style={{
+                      padding: '8px 16px',
+                      borderRadius: 10,
+                      background: 'rgba(245, 158, 11, 0.12)',
+                      border: '1px solid rgba(245, 158, 11, 0.3)',
+                      display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#d97706', fontWeight: 600,
+                    }}>
+                      <span>⚠️</span>
+                      <span>पिछले माह का बकाया: <strong>{prevMonthsUnpaidList.length}</strong> सदस्य</span>
+                    </div>
+                  )}
                 </div>
 
-                {contributionMembers.length === 0 ? (
-                  <div className="card">
-                    <div className="empty-state">
-                      <div className="empty-state-icon"><Users size={32} /></div>
-                      <h3 className="empty-state-title">कोई सदस्य नहीं मिला</h3>
-                      <p className="empty-state-text">
-                        कृपया &apos;लोग / People&apos; पेज पर जाकर सदस्यों को जोड़ें।
-                      </p>
-                      <Link href="/people" className="btn btn-primary btn-sm" style={{ marginTop: 12 }}>
-                        <Users size={15} /> सदस्य जोड़ें
-                      </Link>
+                {/* Previous Month Notice & Toggle ("previous month ka jo baki rahe usi ka name dikhe") */}
+                {isSelectedPreviousMonth && (
+                  <div style={{
+                    padding: '12px 16px',
+                    marginBottom: 16,
+                    borderRadius: 10,
+                    background: 'rgba(245, 158, 11, 0.08)',
+                    border: '1px solid rgba(245, 158, 11, 0.25)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: 12,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 18 }}>📌</span>
+                      <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>
+                        <strong>पिछला महीना ({formatHindiMonth(activeContributionMonth)}):</strong> केवल वही सदस्य प्रदर्शित हैं जिनका अंशदान बाकी है।
+                      </span>
                     </div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button
+                        type="button"
+                        onClick={() => setShowOnlyPendingInPrevMonth(true)}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: 6,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          border: 'none',
+                          cursor: 'pointer',
+                          background: showOnlyPendingInPrevMonth ? '#ef4444' : 'var(--bg-primary)',
+                          color: showOnlyPendingInPrevMonth ? '#ffffff' : 'var(--text-secondary)',
+                        }}
+                      >
+                        ⚠️ केवल बाकी सदस्य ({pendingMembersCount})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowOnlyPendingInPrevMonth(false)}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: 6,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          border: 'none',
+                          cursor: 'pointer',
+                          background: !showOnlyPendingInPrevMonth ? 'var(--brand-primary)' : 'var(--bg-primary)',
+                          color: !showOnlyPendingInPrevMonth ? '#ffffff' : 'var(--text-secondary)',
+                        }}
+                      >
+                        👥 सभी सदस्य ({currentMonthContributionMembers.length})
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {displayedContributionMembers.length === 0 ? (
+                  <div className="card" style={{ padding: 24, textAlign: 'center' }}>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
+                      {isSelectedPreviousMonth
+                        ? `🎉 ${formatHindiMonth(activeContributionMonth)} का कोई बकाया नहीं है — सभी सदस्यों का अंशदान प्राप्त हो चुका था!`
+                        : 'कोई सदस्य नहीं मिला। कृपया "लोग" मेनू में सदस्य जोड़ें।'}
+                    </p>
                   </div>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: 16 }}>
-                    {contributionMembers.map((m) => (
+                    {displayedContributionMembers.map((m) => (
                       <div
                         key={m.name}
                         className="card"
                         style={{
                           padding: 18,
-                          borderLeft: `5px solid ${m.hasContributed ? '#10b981' : '#f59e0b'}`,
+                          borderLeft: `5px solid ${m.hasContributed ? '#10b981' : '#ef4444'}`,
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             <div style={{
                               width: 42, height: 42, borderRadius: '50%',
-                              background: m.hasContributed ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-secondary)',
+                              background: m.hasContributed ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.12)',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              color: m.hasContributed ? '#059669' : 'var(--text-secondary)',
+                              color: m.hasContributed ? '#059669' : '#dc2626',
                               fontWeight: 700, fontSize: 16,
                             }}>
                               {m.name.charAt(0).toUpperCase()}
@@ -776,19 +918,39 @@ function EventDetailContent() {
                               </p>
                             </div>
                           </div>
+                          {/* Status Badge: with green tick if contributed, STRICTLY UNTICKED if not contributed */}
                           <span style={{
                             fontSize: 11,
                             fontWeight: 700,
-                            padding: '3px 8px',
+                            padding: '4px 9px',
                             borderRadius: 6,
                             background: m.hasContributed ? '#ecfdf5' : '#fef2f2',
                             color: m.hasContributed ? '#059669' : '#dc2626',
-                            border: `1px solid ${m.hasContributed ? '#a7f3d0' : '#fecaca'}`,
+                            border: `1.5px solid ${m.hasContributed ? '#a7f3d0' : '#fecaca'}`,
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: 4,
+                            gap: 5,
                           }}>
-                            {m.hasContributed ? '✓ जमा (Paid)' : '☐ बाकी (Pending)'}
+                            {m.hasContributed ? (
+                              <>
+                                <span style={{
+                                  width: 14, height: 14, borderRadius: 3,
+                                  background: '#10b981', color: '#fff',
+                                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                  fontSize: 10, fontWeight: 900,
+                                }}>✓</span>
+                                <span>जमा (Paid)</span>
+                              </>
+                            ) : (
+                              <>
+                                <span style={{
+                                  width: 14, height: 14, borderRadius: 3,
+                                  border: '1.5px solid #dc2626', background: '#fff',
+                                  display: 'inline-block',
+                                }}></span>
+                                <span>बाकी (Pending)</span>
+                              </>
+                            )}
                           </span>
                         </div>
 
@@ -800,7 +962,9 @@ function EventDetailContent() {
                           justifyContent: 'space-between',
                           alignItems: 'center',
                         }}>
-                          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>मासिक अंशदान:</span>
+                          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                            {formatHindiMonth(activeContributionMonth)} अंशदान:
+                          </span>
                           <span style={{
                             fontSize: 15,
                             fontWeight: 700,
@@ -810,22 +974,100 @@ function EventDetailContent() {
                           </span>
                         </div>
 
+                        {m.hasContributed && m.paymentDates.length > 0 && (
+                          <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 8, marginBottom: 0 }}>
+                            🗓️ {m.paymentDates.join(', ')} • {m.paymentMethods.join(', ')}
+                          </p>
+                        )}
+
                         {!m.hasContributed && (
                           <div style={{ marginTop: 12, textAlign: 'right' }}>
                             <button
-                              onClick={() => {
-                                setEditMoney(null);
-                                setShowAddMoney(true);
-                              }}
+                              onClick={() => handleOpenAddContributionForMember(m.name, activeContributionMonth)}
                               className="btn btn-sm btn-outline"
                               style={{ width: '100%', justifyContent: 'center' }}
                             >
-                              <Plus size={14} /> अंशदान दर्ज करें
+                              <Plus size={14} /> + अंशदान दर्ज करें
                             </button>
                           </div>
                         )}
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {/* Previous Months Remaining Unpaid Defaulters ("previous month ka jo baki rahe usi ka name dikhe") */}
+                {prevMonthsUnpaidList.length > 0 && !isSelectedPreviousMonth && (
+                  <div style={{ marginTop: 32 }}>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: 14,
+                      padding: '12px 18px',
+                      borderRadius: 10,
+                      background: '#fffbeb',
+                      border: '1.5px solid #fde68a',
+                      flexWrap: 'wrap',
+                      gap: 8,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 22 }}>⚠️</span>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#92400e' }}>
+                            पिछले माह का बकाया सदस्य ({prevMonthsUnpaidList.length} सदस्य बाकी)
+                          </h4>
+                          <p style={{ margin: '2px 0 0 0', fontSize: 12, color: '#b45309' }}>
+                            जो पिछले महीने अंशदान नहीं दे पाए थे (केवल बकायादार सदस्य)
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+                      {prevMonthsUnpaidList.map((u, idx) => (
+                        <div
+                          key={`${u.name}-${u.month}-${idx}`}
+                          className="card"
+                          style={{
+                            padding: 14,
+                            borderLeft: '4px solid #ef4444',
+                            background: 'var(--bg-secondary)',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                              <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                                {u.name}
+                              </p>
+                              <p style={{ margin: '2px 0 0 0', fontSize: 11, color: 'var(--text-tertiary)' }}>
+                                {u.mobile ? `📱 ${u.mobile}` : 'मोबाइल दर्ज नहीं'}
+                              </p>
+                            </div>
+                            <span style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              padding: '3px 8px',
+                              borderRadius: 6,
+                              background: '#fef2f2',
+                              color: '#dc2626',
+                              border: '1px solid #fecaca',
+                            }}>
+                              {u.monthLabel} बकाया
+                            </span>
+                          </div>
+                          <div style={{ marginTop: 10, textAlign: 'right' }}>
+                            <button
+                              onClick={() => handleOpenAddContributionForMember(u.name, u.month)}
+                              className="btn btn-sm btn-outline"
+                              style={{ fontSize: 12, padding: '4px 10px', width: '100%', justifyContent: 'center' }}
+                            >
+                              <Plus size={13} /> {u.monthLabel} का बकाया दर्ज करें
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -974,10 +1216,13 @@ function EventDetailContent() {
         {/* Modals */}
         <AddMoneyModal
           isOpen={showAddMoney}
-          onClose={() => { setShowAddMoney(false); setEditMoney(null); }}
+          onClose={() => { setShowAddMoney(false); setEditMoney(null); setAddMoneyDefaults(null); }}
           eventId={id}
           eventType={event.eventType}
           editData={editMoney}
+          defaultGivenBy={addMoneyDefaults?.givenBy}
+          defaultDate={addMoneyDefaults?.date}
+          defaultPurpose={addMoneyDefaults?.purpose}
           onSaved={refreshData}
         />
 

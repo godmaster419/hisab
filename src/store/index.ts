@@ -937,14 +937,14 @@ export function loadSampleData(): void {
     id: event2Id,
     name: 'समाज सेवा कल्याण अंशदान (Demo)',
     eventType: 'contribution',
-    startDate: '2026-10-01',
+    startDate: '2026-09-01',
     endDate: '2026-10-31',
     description: 'मासिक समिति अंशदान और ग्रुप फंड हिसाब',
     responsiblePerson: 'अमित सिंह (कोषाध्यक्ष)',
     openingBalance: 0,
     isArchived: false,
     isDemo: true,
-    createdAt: '2026-10-01T10:00:00Z',
+    createdAt: '2026-09-01T10:00:00Z',
     updatedAt: '2026-10-01T10:00:00Z',
   };
 
@@ -987,14 +987,22 @@ export function loadSampleData(): void {
       id: generateId(), eventId, amount: 6000, givenBy: 'मनोज गुप्ता', depositedWith: 'अमित सिंह',
       date: '2026-09-26', purpose: 'अतिथि व्यवस्था', paymentMethod: 'bank_transfer', note: 'Bank से transfer किया', isDemo: true, createdAt: '2026-09-26T10:00:00Z',
     },
-    // Contribution demo entries
+    // Contribution demo entries (Month-wise: September 2026 & October 2026)
     {
-      id: generateId(), eventId: event2Id, amount: 3000, givenBy: 'राहुल वर्मा', depositedWith: 'अमित सिंह',
-      date: '2026-10-10', purpose: 'मासिक अंशदान', paymentMethod: 'cash', note: '', isDemo: true, createdAt: '2026-10-10T10:00:00Z',
+      id: generateId(), eventId: event2Id, amount: 1000, givenBy: 'सुरेश कुमार', depositedWith: 'अमित सिंह',
+      date: '2026-09-05', purpose: 'सितंबर 2026 मासिक अंशदान', paymentMethod: 'cash', note: '', isDemo: true, createdAt: '2026-09-05T10:00:00Z',
     },
     {
-      id: generateId(), eventId: event2Id, amount: 2000, givenBy: 'दीपक जायसवाल', depositedWith: 'अमित सिंह',
-      date: '2026-10-10', purpose: 'मासिक अंशदान', paymentMethod: 'upi', note: '', isDemo: true, createdAt: '2026-10-10T11:00:00Z',
+      id: generateId(), eventId: event2Id, amount: 1000, givenBy: 'राहुल वर्मा', depositedWith: 'अमित सिंह',
+      date: '2026-09-10', purpose: 'सितंबर 2026 मासिक अंशदान', paymentMethod: 'upi', note: '', isDemo: true, createdAt: '2026-09-10T10:00:00Z',
+    },
+    {
+      id: generateId(), eventId: event2Id, amount: 1000, givenBy: 'दीपक जायसवाल', depositedWith: 'अमित सिंह',
+      date: '2026-10-04', purpose: 'अक्टूबर 2026 मासिक अंशदान', paymentMethod: 'upi', note: 'GPay से जमा', isDemo: true, createdAt: '2026-10-04T11:00:00Z',
+    },
+    {
+      id: generateId(), eventId: event2Id, amount: 1000, givenBy: 'मनोज गुप्ता', depositedWith: 'अमित सिंह',
+      date: '2026-10-05', purpose: 'अक्टूबर 2026 मासिक अंशदान', paymentMethod: 'cash', note: '', isDemo: true, createdAt: '2026-10-05T12:00:00Z',
     },
     // Dukandar Diary demo entries (Customer Jama / Payment)
     {

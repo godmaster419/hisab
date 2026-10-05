@@ -1,6 +1,6 @@
 // ============================================
 // HISAB - Utility Functions
-// ============================================
+import type { MoneyReceived } from '@/types';
 
 /**
  * Format number in Indian numbering system (₹1,25,000)
@@ -241,4 +241,159 @@ export function getNextMonthStr(yyyyMm: string): string {
 export function getCurrentMonthStr(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+export interface MonthContributionMember {
+  name: string;
+  mobile: string;
+  totalContributed: number;
+  hasContributed: boolean;
+  paymentDates: string[];
+  paymentMethods: string[];
+  transactions: MoneyReceived[];
+}
+
+export interface PreviousMonthUnpaidRecord {
+  name: string;
+  mobile: string;
+  month: string;
+  monthLabel: string;
+}
+
+/**
+ * Get sorted distinct YYYY-MM months for a contribution event
+ */
+export function getContributionMonths(
+  event: { startDate?: string; endDate?: string },
+  moneyReceived: { date?: string }[],
+  expenses?: { date?: string }[]
+): string[] {
+  const currentMonth = getCurrentMonthStr();
+  const set = new Set<string>();
+  set.add(currentMonth);
+
+  if (event.startDate && event.startDate.length >= 7) {
+    set.add(event.startDate.slice(0, 7));
+  }
+  if (event.endDate && event.endDate.length >= 7) {
+    set.add(event.endDate.slice(0, 7));
+  }
+  moneyReceived.forEach((m) => {
+    if (m.date && m.date.length >= 7) set.add(m.date.slice(0, 7));
+  });
+  if (expenses) {
+    expenses.forEach((e) => {
+      if (e.date && e.date.length >= 7) set.add(e.date.slice(0, 7));
+    });
+  }
+
+  // Filter valid YYYY-MM format and sort descending (latest first)
+  return Array.from(set)
+    .filter((m) => /^\d{4}-\d{2}$/.test(m))
+    .sort((a, b) => b.localeCompare(a));
+}
+
+/**
+ * Get member contribution status for a specific month
+ * "jo jis month me diya hai wo usi month dikhe"
+ */
+export function getMonthContributionMembers(
+  moneyReceived: MoneyReceived[],
+  targetMonth: string,
+  registeredPeople: { name: string; mobile?: string }[]
+): MonthContributionMember[] {
+  const map = new Map<string, MonthContributionMember>();
+
+  // 1. All registered people
+  registeredPeople.forEach((p) => {
+    const key = p.name.trim().toLowerCase();
+    map.set(key, {
+      name: p.name.trim(),
+      mobile: p.mobile ? p.mobile.trim() : '',
+      totalContributed: 0,
+      hasContributed: false,
+      paymentDates: [],
+      paymentMethods: [],
+      transactions: [],
+    });
+  });
+
+  // 2. Only payments belonging to targetMonth ("jo jis month me diya hai wo usi month dikhe")
+  const monthTransactions = moneyReceived.filter(
+    (m) => m.date && m.date.startsWith(targetMonth)
+  );
+
+  monthTransactions.forEach((m) => {
+    const key = m.givenBy.trim().toLowerCase();
+    let member = map.get(key);
+    if (!member) {
+      member = {
+        name: m.givenBy.trim(),
+        mobile: '',
+        totalContributed: 0,
+        hasContributed: false,
+        paymentDates: [],
+        paymentMethods: [],
+        transactions: [],
+      };
+      map.set(key, member);
+    }
+    member.totalContributed += m.amount;
+    member.hasContributed = true;
+    member.transactions.push(m);
+
+    const mode = PAYMENT_LABELS[m.paymentMethod]?.hi || m.paymentMethod || 'नकद';
+    if (!member.paymentMethods.includes(mode)) {
+      member.paymentMethods.push(mode);
+    }
+    const dStr = formatDate(m.date);
+    if (!member.paymentDates.includes(dStr)) {
+      member.paymentDates.push(dStr);
+    }
+  });
+
+  return Array.from(map.values()).sort((a, b) => {
+    if (a.hasContributed && !b.hasContributed) return -1;
+    if (!a.hasContributed && b.hasContributed) return 1;
+    return a.name.localeCompare(b.name, 'hi');
+  });
+}
+
+/**
+ * Get unpaid members from previous months
+ * "previous month ka jo baki rahe usi ka name dikhe"
+ */
+export function getPreviousMonthsUnpaid(
+  allMonths: string[],
+  currentMonthStr: string,
+  moneyReceived: MoneyReceived[],
+  registeredPeople: { name: string; mobile?: string }[]
+): PreviousMonthUnpaidRecord[] {
+  // Only months strictly before the current month, sorted oldest to newest
+  const priorMonths = allMonths.filter((m) => m < currentMonthStr).sort();
+  const unpaidRecords: PreviousMonthUnpaidRecord[] = [];
+
+  priorMonths.forEach((pm) => {
+    const pmTransactions = moneyReceived.filter(
+      (m) => m.date && m.date.startsWith(pm)
+    );
+    const paidNames = new Set(
+      pmTransactions.map((m) => m.givenBy.trim().toLowerCase())
+    );
+
+    registeredPeople.forEach((p) => {
+      const key = p.name.trim().toLowerCase();
+      // If person didn't pay in this previous month, they are unpaid ("jo baki rahe")
+      if (!paidNames.has(key)) {
+        unpaidRecords.push({
+          name: p.name.trim(),
+          mobile: p.mobile ? p.mobile.trim() : '',
+          month: pm,
+          monthLabel: formatHindiMonth(pm),
+        });
+      }
+    });
+  });
+
+  return unpaidRecords;
 }

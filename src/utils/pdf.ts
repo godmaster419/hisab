@@ -5,7 +5,17 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { HisabEvent, MoneyReceived, Expense } from '@/types';
-import { formatPDFCurrency, formatDate, CATEGORY_LABELS, PAYMENT_LABELS } from '@/utils/helpers';
+import {
+  formatPDFCurrency,
+  formatDate,
+  CATEGORY_LABELS,
+  PAYMENT_LABELS,
+  getContributionMonths,
+  getMonthContributionMembers,
+  getPreviousMonthsUnpaid,
+  getCurrentMonthStr,
+  formatHindiMonth,
+} from '@/utils/helpers';
 import { getEventSummary, getCategorySummary, getPersonSummary, getPeople } from '@/store';
 import { NotoSansDevanagariRegular, NotoSansDevanagariBold } from '@/utils/devanagariFont';
 
@@ -375,59 +385,23 @@ export function generateEventPDF(
 
   if (isContribution) {
     const registeredPeople = getPeople();
-    const peopleMap = new Map<string, {
-      name: string;
-      mobile: string;
-      totalContributed: number;
-      hasContributed: boolean;
-    }>();
+    const allMonths = getContributionMonths(event, moneyReceived, expenses);
+    const currentMonthStr = getCurrentMonthStr();
+    const currentMonthMembers = getMonthContributionMembers(moneyReceived, currentMonthStr, registeredPeople);
+    const prevUnpaid = getPreviousMonthsUnpaid(allMonths, currentMonthStr, moneyReceived, registeredPeople);
 
-    // 1. All registered people added in People tab
-    registeredPeople.forEach(p => {
-      const key = p.name.trim().toLowerCase();
-      peopleMap.set(key, {
-        name: p.name.trim(),
-        mobile: p.mobile ? p.mobile.trim() : '',
-        totalContributed: 0,
-        hasContributed: false,
-      });
-    });
-
-    // 2. All contributors who paid in this event
-    moneyReceived.forEach(m => {
-      const key = m.givenBy.trim().toLowerCase();
-      let member = peopleMap.get(key);
-      if (!member) {
-        member = {
-          name: m.givenBy.trim(),
-          mobile: '',
-          totalContributed: 0,
-          hasContributed: false,
-        };
-        peopleMap.set(key, member);
-      }
-      member.totalContributed += m.amount;
-      member.hasContributed = true;
-    });
-
-    const contributionMembers = Array.from(peopleMap.values()).sort((a, b) => {
-      if (a.hasContributed && !b.hasContributed) return -1;
-      if (!a.hasContributed && b.hasContributed) return 1;
-      return a.name.localeCompare(b.name, 'hi');
-    });
-
-    if (contributionMembers.length > 0) {
+    if (currentMonthMembers.length > 0) {
       checkNewPage(30);
       doc.setFontSize(13);
       doc.setTextColor(16, 185, 129);
       setFont(doc, 'bold');
-      doc.text('सदस्य मासिक अंशदान स्थिति / MEMBER CONTRIBUTION STATUS', margin, y);
+      doc.text(`सदस्य चालू माह अंशदान स्थिति (${formatHindiMonth(currentMonthStr)})`, margin, y);
       y += 3;
 
       autoTable(doc, {
         startY: y,
         head: [['क्र.', 'सदस्य का नाम / Member', 'मोबाइल / Mobile', 'अंशदान राशि (₹)', 'मासिक अंशदान स्थिति / Status']],
-        body: contributionMembers.map((m, idx) => [
+        body: currentMonthMembers.map((m, idx) => [
           (idx + 1).toString(),
           m.name,
           m.mobile || '—',
@@ -454,6 +428,53 @@ export function generateEventPDF(
       });
 
       y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 12;
+    }
+
+    // Previous Months Remaining Dues ("previous month ka jo baki rahe usi ka name dikhe")
+    checkNewPage(30);
+    doc.setFontSize(13);
+    doc.setTextColor(239, 68, 68);
+    setFont(doc, 'bold');
+    doc.text('पिछले माह का बकाया / PREVIOUS MONTHS REMAINING DUES', margin, y);
+    y += 3;
+
+    if (prevUnpaid.length > 0) {
+      autoTable(doc, {
+        startY: y,
+        head: [['क्र.', 'सदस्य का नाम (बकायादार)', 'मोबाइल / Mobile', 'बकाया माह / Month', 'स्थिति / Status']],
+        body: prevUnpaid.map((u, idx) => [
+          (idx + 1).toString(),
+          u.name,
+          u.mobile || '—',
+          u.monthLabel,
+          '[  ] बाकी (Unpaid)',
+        ]),
+        theme: 'grid',
+        headStyles: {
+          fillColor: [239, 68, 68],
+          textColor: 255,
+          fontStyle: 'bold',
+          fontSize: 7.5,
+          font: 'NotoSansDevanagari',
+        },
+        bodyStyles: {
+          fontSize: 7.5,
+          font: 'NotoSansDevanagari',
+        },
+        styles: {
+          cellPadding: 3,
+          font: 'NotoSansDevanagari',
+        },
+        margin: { left: margin, right: margin },
+      });
+
+      y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 12;
+    } else {
+      doc.setFontSize(9);
+      doc.setTextColor(16, 185, 129);
+      setFont(doc, 'normal');
+      doc.text('✓ पिछले माह का कोई बकाया नहीं है — सभी सदस्यों का हिसाब पूर्ण है।', margin, y + 5);
+      y += 15;
     }
   } else if (people.length > 0) {
     checkNewPage(30);
@@ -811,77 +832,26 @@ export function generateEventReportHTML(
   }).join('');
 
   // ============================================
-  // Contribution Members Logic (जब इवेंट टाइप contribution हो)
+  // Contribution Members Logic (Month-wise)
   // ============================================
   const isContribution = event.eventType === 'contribution';
   const registeredPeople = getPeople();
-  const peopleMap = new Map<string, {
-    name: string;
-    mobile: string;
-    totalContributed: number;
-    hasContributed: boolean;
-    paymentMethods: string[];
-    paymentDates: string[];
-  }>();
+  const allContributionMonths = getContributionMonths(event, moneyReceived, expenses);
+  const currentMonthStr = getCurrentMonthStr();
+  const currentMonthMembers = getMonthContributionMembers(moneyReceived, currentMonthStr, registeredPeople);
+  const prevUnpaid = getPreviousMonthsUnpaid(allContributionMonths, currentMonthStr, moneyReceived, registeredPeople);
 
-  if (isContribution) {
-    // 1. जिन व्यक्तियों को यूज़र ने सिस्टम में जोड़ा है (People tab)
-    registeredPeople.forEach(p => {
-      const key = p.name.trim().toLowerCase();
-      peopleMap.set(key, {
-        name: p.name.trim(),
-        mobile: p.mobile ? p.mobile.trim() : '',
-        totalContributed: 0,
-        hasContributed: false,
-        paymentMethods: [],
-        paymentDates: [],
-      });
-    });
+  const totalCurrentMonthCollected = currentMonthMembers.reduce((sum, m) => sum + m.totalContributed, 0);
+  const paidCount = currentMonthMembers.filter(m => m.hasContributed).length;
+  const pendingCount = currentMonthMembers.filter(m => !m.hasContributed).length;
 
-    // 2. इस इवेंट में प्राप्त अंशदान (moneyReceived) का मिलान
-    moneyReceived.forEach(m => {
-      const key = m.givenBy.trim().toLowerCase();
-      let member = peopleMap.get(key);
-      if (!member) {
-        member = {
-          name: m.givenBy.trim(),
-          mobile: '',
-          totalContributed: 0,
-          hasContributed: false,
-          paymentMethods: [],
-          paymentDates: [],
-        };
-        peopleMap.set(key, member);
-      }
-      member.totalContributed += m.amount;
-      member.hasContributed = true;
-      const modeHi = PAYMENT_LABELS[m.paymentMethod]?.hi || m.paymentMethod || 'नकद';
-      if (!member.paymentMethods.includes(modeHi)) {
-        member.paymentMethods.push(modeHi);
-      }
-      const formattedDate = formatDate(m.date);
-      if (!member.paymentDates.includes(formattedDate)) {
-        member.paymentDates.push(formattedDate);
-      }
-    });
-  }
-
-  const contributionMembers = Array.from(peopleMap.values()).sort((a, b) => {
-    // जमा करने वाले पहले, फिर बाकी वाले, फिर नाम अनुसार
-    if (a.hasContributed && !b.hasContributed) return -1;
-    if (!a.hasContributed && b.hasContributed) return 1;
-    return a.name.localeCompare(b.name, 'hi');
-  });
-
-  const totalContributionCollected = contributionMembers.reduce((sum, m) => sum + m.totalContributed, 0);
-  const paidCount = contributionMembers.filter(m => m.hasContributed).length;
-  const pendingCount = contributionMembers.filter(m => !m.hasContributed).length;
-
-  // Contribution Table Rows (लेना है या देना हटाकर टिक/बिना टिक का विकल्प)
-  const contributionRows = contributionMembers.map((m, idx) => {
+  // Current Month Rows:
+  // "current month me sabka dikhe aur status dikhe pdf me"
+  // "current month me jo nahi diya usake age tik na dikho"
+  const contributionRows = currentMonthMembers.map((m, idx) => {
     const paymentInfo = m.hasContributed
       ? `${m.paymentDates.join(', ')} (${m.paymentMethods.join(', ')})`
-      : '— (अंशदान बाकी)';
+      : '— (इस माह का अंशदान बाकी)';
 
     return `
       <tr>
@@ -914,6 +884,28 @@ export function generateEventReportHTML(
       </tr>
     `;
   }).join('');
+
+  // Previous Months Unpaid Rows ("previous month ka jo baki rahe usi ka name dikhe")
+  const prevUnpaidRows = prevUnpaid.map((u, idx) => `
+    <tr>
+      <td style="text-align: center; color: #64748b;">${idx + 1}</td>
+      <td>
+        <strong style="color: #991b1b; font-size: 13px;">${escapeHtml(u.name)}</strong>
+      </td>
+      <td style="color: #64748b; font-size: 11px;">
+        ${escapeHtml(u.mobile || '—')}
+      </td>
+      <td style="font-size: 12px; font-weight: 600; color: #475569;">
+        ${escapeHtml(u.monthLabel)}
+      </td>
+      <td style="text-align: center;">
+        <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 11px; background: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca;">
+          <span style="display: inline-block; width: 16px; height: 16px; border-radius: 3px; border: 1.5px solid #dc2626; background: #ffffff;"></span>
+          <span>बाकी (Unpaid)</span>
+        </div>
+      </td>
+    </tr>
+  `).join('');
 
   const reportTitle = `HISAB_${sanitizeFilename(event.name)}_Report`;
 
@@ -1472,9 +1464,10 @@ export function generateEventReportHTML(
 
     <!-- People Summary / Member Contribution Checklist -->
     ${isContribution ? `
+      <!-- 1. चालू माह अंशदान स्थिति (सभी सदस्य) -->
       <div class="section-title">
-        <span>👥 सदस्य मासिक अंशदान स्थिति / Member Monthly Contribution Status</span>
-        <span class="count-badge">${contributionMembers.length} सदस्य</span>
+        <span>👥 चालू माह सदस्य अंशदान स्थिति / Current Month (${escapeHtml(formatHindiMonth(currentMonthStr))}) Status</span>
+        <span class="count-badge">${currentMonthMembers.length} सदस्य</span>
       </div>
       <div style="display: flex; gap: 12px; margin-bottom: 14px; flex-wrap: wrap;">
         <div style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 8px; padding: 6px 14px; font-size: 12px; color: #065f46; display: flex; align-items: center; gap: 6px;">
@@ -1484,10 +1477,10 @@ export function generateEventReportHTML(
           <strong style="color: #dc2626; font-size: 14px;">☐</strong> <strong>बाकी सदस्य:</strong> ${pendingCount} व्यक्ति
         </div>
         <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 8px; padding: 6px 14px; font-size: 12px; color: #1e40af; display: flex; align-items: center; gap: 6px;">
-          <strong>💰 कुल अंशदान संग्रह:</strong> ${formatPDFCurrency(totalContributionCollected)}
+          <strong>💰 चालू माह कुल संग्रह:</strong> ${formatPDFCurrency(totalCurrentMonthCollected)}
         </div>
       </div>
-      ${contributionMembers.length > 0 ? `
+      ${currentMonthMembers.length > 0 ? `
         <table>
           <thead>
             <tr>
@@ -1505,7 +1498,7 @@ export function generateEventReportHTML(
           <tfoot>
             <tr>
               <td colspan="3" style="text-align: right; font-weight: 700;">कुल अंशदान संग्रह / Total Collected:</td>
-              <td style="text-align: right; font-weight: 700; color: #059669; font-size: 13px;">${formatPDFCurrency(totalContributionCollected)}</td>
+              <td style="text-align: right; font-weight: 700; color: #059669; font-size: 13px;">${formatPDFCurrency(totalCurrentMonthCollected)}</td>
               <td colspan="2" style="text-align: right; font-size: 11px; font-weight: 600;">
                 <span style="color: #059669; font-weight: 700;">✓ ${paidCount} जमा (Paid)</span> &nbsp;|&nbsp; 
                 <span style="color: #dc2626; font-weight: 700;">☐ ${pendingCount} बाकी (Pending)</span>
@@ -1514,6 +1507,39 @@ export function generateEventReportHTML(
           </tfoot>
         </table>
       ` : '<p style="font-size:12px; color:#64748b; margin-bottom:16px;">कोई सदस्य दर्ज नहीं है। कृपया "लोग" मेनू में सदस्य जोड़ें।</p>'}
+
+      <!-- 2. पिछले माह का बकाया ("previous month ka jo baki rahe usi ka name dikhe") -->
+      <div class="section-title" style="margin-top: 24px;">
+        <span style="color: #b91c1c;">⚠️ पिछले माह का बकाया / Previous Months Remaining Dues</span>
+        <span class="count-badge" style="background: #fef2f2; color: #dc2626; border-color: #fecaca;">
+          ${prevUnpaid.length} बकायादार सदस्य
+        </span>
+      </div>
+      ${prevUnpaid.length > 0 ? `
+        <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 8px; padding: 8px 14px; font-size: 12px; color: #92400e; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+          <span>⚠️</span>
+          <span><strong>ध्यान दें:</strong> पिछले माह के केवल वही सदस्य नीचे सूचीबद्ध हैं जिनका अंशदान अभी बाकी है (जो सदस्य पूर्व में जमा कर चुके हैं, उनका हिसाब चुकता माना गया है)।</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 35px; text-align: center;">क्र.</th>
+              <th>सदस्य का नाम (बकायादार)</th>
+              <th style="width: 110px;">मोबाइल नंबर</th>
+              <th style="width: 140px;">बकाया माह / Period</th>
+              <th style="width: 150px; text-align: center;">बकाया स्थिति</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${prevUnpaidRows}
+          </tbody>
+        </table>
+      ` : `
+        <div style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #065f46; display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+          <span style="color: #059669; font-size: 16px; font-weight: 900;">✓</span>
+          <span><strong>शानदार!</strong> पिछले किसी भी माह का कोई बकाया नहीं है — सभी सदस्यों का हिसाब पूर्ण है।</span>
+        </div>
+      `}
     ` : (people.length > 0 ? `
       <div class="section-title">
         <span>👥 व्यक्तिगत हिसाब सारांश / People Summary</span>

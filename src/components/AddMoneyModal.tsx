@@ -15,10 +15,25 @@ interface AddMoneyModalProps {
   eventId: string;
   eventType?: HisabEventType;
   editData?: MoneyReceived | null;
+  defaultGivenBy?: string;
+  defaultDate?: string;
+  defaultPurpose?: string;
+  defaultDepositedWith?: string;
   onSaved: () => void;
 }
 
-export default function AddMoneyModal({ isOpen, onClose, eventId, eventType, editData, onSaved }: AddMoneyModalProps) {
+export default function AddMoneyModal({
+  isOpen,
+  onClose,
+  eventId,
+  eventType,
+  editData,
+  defaultGivenBy,
+  defaultDate,
+  defaultPurpose,
+  defaultDepositedWith,
+  onSaved,
+}: AddMoneyModalProps) {
   const { showToast } = useToast();
   const [form, setForm] = useState({
     amount: '',
@@ -46,16 +61,16 @@ export default function AddMoneyModal({ isOpen, onClose, eventId, eventType, edi
     } else {
       setForm({
         amount: '',
-        givenBy: '',
-        depositedWith: '',
-        date: getTodayDate(),
-        purpose: '',
+        givenBy: defaultGivenBy || '',
+        depositedWith: defaultDepositedWith || '',
+        date: defaultDate || getTodayDate(),
+        purpose: defaultPurpose || '',
         paymentMethod: 'cash',
         note: '',
       });
     }
     setErrors({});
-  }, [editData, isOpen]);
+  }, [editData, isOpen, defaultGivenBy, defaultDate, defaultPurpose, defaultDepositedWith]);
 
   const validate = () => {
     const errs: Record<string, string> = {};
