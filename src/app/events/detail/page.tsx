@@ -6,12 +6,13 @@ import Link from 'next/link';
 import AppLayout from '@/components/AppLayout';
 import AddMoneyModal from '@/components/AddMoneyModal';
 import AddExpenseModal from '@/components/AddExpenseModal';
+import ChangeEventTypeModal from '@/components/ChangeEventTypeModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useToast } from '@/components/Toast';
 import {
   ArrowLeft, Plus, IndianRupee, ShoppingCart, Download, Printer,
   Edit, Trash2, Eye, MoreVertical, FileText, FileSpreadsheet, AlertTriangle,
-  Users, BarChart3, Clock, TrendingUp, TrendingDown, Wallet,
+  Users, BarChart3, Clock, TrendingUp, TrendingDown, Wallet, RefreshCw,
 } from 'lucide-react';
 import {
   getEvent, getEventSummary, getMoneyReceivedByEvent, getExpensesByEvent,
@@ -19,7 +20,7 @@ import {
   deleteMoneyReceived, deleteExpense, deleteEvent,
 } from '@/store';
 import { formatCurrency, formatDate, CATEGORY_LABELS, PAYMENT_LABELS, getCategoryColor } from '@/utils/helpers';
-import { HisabEvent, MoneyReceived, Expense, ExpenseCategory, getEventTypeConfig } from '@/types';
+import { HisabEvent, HisabEventType, MoneyReceived, Expense, ExpenseCategory, getEventTypeConfig } from '@/types';
 import { downloadEventPDF, printEventPDF } from '@/utils/pdf';
 import { exportMoneyReceivedCSV, exportExpensesCSV, exportEventExcel } from '@/utils/export';
 import {
@@ -39,6 +40,7 @@ function EventDetailContent() {
   // Modals
   const [showAddMoney, setShowAddMoney] = useState(false);
   const [showAddExpense, setShowAddExpense] = useState(false);
+  const [showChangeTypeModal, setShowChangeTypeModal] = useState(false);
   const [editMoney, setEditMoney] = useState<MoneyReceived | null>(null);
   const [editExpense, setEditExpense] = useState<Expense | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'income' | 'expense'; id: string } | null>(null);
@@ -70,6 +72,12 @@ function EventDetailContent() {
     setCategories(getCategorySummary(id));
     setPeople(getPersonSummary(id));
     setTransactions(getTransactionHistory(id));
+  };
+
+  const handleTypeChanged = (newType: HisabEventType) => {
+    const ev = getEvent(id);
+    if (ev) setEvent(ev);
+    refreshData();
   };
 
   const handleDeleteTransaction = () => {
@@ -130,24 +138,30 @@ function EventDetailContent() {
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
               <h1 className="page-title" style={{ margin: 0 }}>{event.name}</h1>
-              {/* Event Type Badge */}
-              <span
+              {/* Event Type Badge - Clickable to change type */}
+              <button
+                type="button"
+                onClick={() => setShowChangeTypeModal(true)}
+                title="इवेंट का प्रकार बदलने के लिए क्लिक करें / Click to switch type"
                 style={{
                   fontSize: 12,
                   fontWeight: 600,
-                  padding: '3px 10px',
+                  padding: '4px 10px',
                   borderRadius: 8,
                   background: typeConfig.badgeBg,
                   color: typeConfig.badgeColor,
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 4,
-                  border: `1px solid ${typeConfig.badgeColor}33`,
+                  gap: 5,
+                  border: `1px solid ${typeConfig.badgeColor}44`,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
                 }}
               >
                 <span>{typeConfig.icon}</span>
                 <span>{typeConfig.shortHi}</span>
-              </span>
+                <span style={{ fontSize: 10, opacity: 0.8, marginLeft: 2 }}>🔄 बदलें</span>
+              </button>
               {event.isDemo && (
                 <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 12, background: 'rgba(245, 158, 11, 0.15)', color: '#d97706', fontWeight: 600 }}>
                   Demo Event
@@ -166,6 +180,13 @@ function EventDetailContent() {
             </button>
             <button className="btn btn-expense btn-sm" onClick={() => { setEditExpense(null); setShowAddExpense(true); }}>
               <ShoppingCart size={15} /> {isDukandar ? '+ सामान दिया (उधारी)' : isContribution ? '+ समूह खर्च' : '+ खर्च जोड़ें'}
+            </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => setShowChangeTypeModal(true)}
+              title="इवेंट का प्रकार बदलें (जैसे कंट्रीब्यूशन, लेन-देन या दुकानदार डायरी)"
+            >
+              <RefreshCw size={15} /> प्रकार बदलें / Change Type
             </button>
             <button className="btn btn-secondary btn-sm" onClick={handleDownloadPDF}>
               <Download size={15} /> PDF डाउनलोड करें
@@ -786,6 +807,15 @@ function EventDetailContent() {
           eventType={event.eventType}
           editData={editExpense}
           onSaved={refreshData}
+        />
+
+        <ChangeEventTypeModal
+          isOpen={showChangeTypeModal}
+          onClose={() => setShowChangeTypeModal(false)}
+          eventId={id}
+          eventName={event.name}
+          currentType={event.eventType}
+          onTypeChanged={handleTypeChanged}
         />
 
         <ConfirmDialog

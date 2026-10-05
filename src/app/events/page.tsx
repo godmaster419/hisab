@@ -4,10 +4,11 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import AppLayout from '@/components/AppLayout';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import ChangeEventTypeModal from '@/components/ChangeEventTypeModal';
 import { useToast } from '@/components/Toast';
 import {
   Plus, Search, Calendar, TrendingUp, TrendingDown, Wallet,
-  MoreVertical, Edit, Trash2, Archive, Eye, Filter,
+  MoreVertical, Edit, Trash2, Archive, Eye, Filter, RefreshCw,
 } from 'lucide-react';
 import { getEvents, getEventSummary, deleteEvent, archiveEvent, unarchiveEvent } from '@/store';
 import { formatCurrency, formatDate } from '@/utils/helpers';
@@ -21,6 +22,7 @@ export default function EventsPage() {
   const [filter, setFilter] = useState<'all' | 'contribution' | 'len_den' | 'dukandar_diary' | 'archived'>('all');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [changeTypeTarget, setChangeTypeTarget] = useState<HisabEvent | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -149,8 +151,15 @@ export default function EventsPage() {
               return (
                 <div key={event.id} className="card card-interactive" style={{ position: 'relative' }}>
                   <div style={{ position: 'absolute', top: 12, right: 50, display: 'flex', gap: 6, alignItems: 'center' }}>
-                    {/* Event Type Badge */}
-                    <span
+                    {/* Event Type Badge - Clickable */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setChangeTypeTarget(event);
+                      }}
+                      title="प्रकार बदलने के लिए क्लिक करें / Click to change type"
                       style={{
                         background: typeConfig.badgeBg,
                         color: typeConfig.badgeColor,
@@ -161,11 +170,14 @@ export default function EventsPage() {
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: 4,
+                        border: `1px solid ${typeConfig.badgeColor}44`,
+                        cursor: 'pointer',
                       }}
                     >
                       <span>{typeConfig.icon}</span>
                       <span>{typeConfig.shortHi}</span>
-                    </span>
+                      <span style={{ fontSize: 9, opacity: 0.8 }}>🔄</span>
+                    </button>
 
                     {event.isArchived && (
                       <span style={{
@@ -226,6 +238,21 @@ export default function EventsPage() {
                         >
                           <Edit size={15} /> एडिट / Edit
                         </Link>
+                        <button
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            padding: '10px 14px', color: 'var(--text-primary)',
+                            width: '100%', background: 'none', border: 'none',
+                            cursor: 'pointer', fontSize: 13, fontFamily: 'inherit',
+                            textAlign: 'left',
+                          }}
+                          onClick={() => {
+                            setChangeTypeTarget(event);
+                            setOpenMenu(null);
+                          }}
+                        >
+                          <RefreshCw size={15} /> प्रकार बदलें / Change Type
+                        </button>
                         <button
                           style={{
                             display: 'flex', alignItems: 'center', gap: 8,
@@ -316,6 +343,20 @@ export default function EventsPage() {
           onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
           onCancel={() => setDeleteConfirm(null)}
         />
+
+        {/* Change Event Type Modal */}
+        {changeTypeTarget && (
+          <ChangeEventTypeModal
+            isOpen={!!changeTypeTarget}
+            onClose={() => setChangeTypeTarget(null)}
+            eventId={changeTypeTarget.id}
+            eventName={changeTypeTarget.name}
+            currentType={changeTypeTarget.eventType}
+            onTypeChanged={() => {
+              refreshData();
+            }}
+          />
+        )}
 
         {/* Click outside to close menu */}
         {openMenu && (

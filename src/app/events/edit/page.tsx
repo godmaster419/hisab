@@ -82,9 +82,17 @@ function EditEventContent() {
           <form onSubmit={handleSubmit}>
             {/* Event Type Selector */}
             <div className="form-group" style={{ marginBottom: 20 }}>
-              <label className="form-label" style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
-                Event का प्रकार (Event Type):
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 6 }}>
+                <label className="form-label" style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>
+                  Event का प्रकार बदलें (Change Event Type):
+                </label>
+                <span style={{ fontSize: 11, color: 'var(--brand-primary)', fontWeight: 600, background: 'var(--brand-primary-light)', padding: '2px 8px', borderRadius: 6 }}>
+                  🔄 कभी भी बदल सकते हैं (डेटा सुरक्षित रहेगा)
+                </span>
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 10 }}>
+                प्रकार बदलने से आपका कोई भी लेनदेन नहीं हटेगा — केवल लेबल्स (जैसे जमा/उधारी/अंशदान) और व्यू बदलेंगे।
+              </p>
               <div
                 style={{
                   display: 'grid',
