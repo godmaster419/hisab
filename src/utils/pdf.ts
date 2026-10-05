@@ -6,7 +6,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { HisabEvent, MoneyReceived, Expense } from '@/types';
 import { formatPDFCurrency, formatDate, CATEGORY_LABELS, PAYMENT_LABELS } from '@/utils/helpers';
-import { getEventSummary, getCategorySummary, getPersonSummary } from '@/store';
+import { getEventSummary, getCategorySummary, getPersonSummary, getPeople } from '@/store';
 import { NotoSansDevanagariRegular, NotoSansDevanagariBold } from '@/utils/devanagariFont';
 
 // ============================================
@@ -368,10 +368,94 @@ export function generateEventPDF(
   }
 
   // ==============================
-  // Person Summary
+  // Person Summary / Contribution Member Checklist
   // ==============================
 
-  if (people.length > 0) {
+  const isContribution = event.eventType === 'contribution';
+
+  if (isContribution) {
+    const registeredPeople = getPeople();
+    const peopleMap = new Map<string, {
+      name: string;
+      mobile: string;
+      totalContributed: number;
+      hasContributed: boolean;
+    }>();
+
+    // 1. All registered people added in People tab
+    registeredPeople.forEach(p => {
+      const key = p.name.trim().toLowerCase();
+      peopleMap.set(key, {
+        name: p.name.trim(),
+        mobile: p.mobile ? p.mobile.trim() : '',
+        totalContributed: 0,
+        hasContributed: false,
+      });
+    });
+
+    // 2. All contributors who paid in this event
+    moneyReceived.forEach(m => {
+      const key = m.givenBy.trim().toLowerCase();
+      let member = peopleMap.get(key);
+      if (!member) {
+        member = {
+          name: m.givenBy.trim(),
+          mobile: '',
+          totalContributed: 0,
+          hasContributed: false,
+        };
+        peopleMap.set(key, member);
+      }
+      member.totalContributed += m.amount;
+      member.hasContributed = true;
+    });
+
+    const contributionMembers = Array.from(peopleMap.values()).sort((a, b) => {
+      if (a.hasContributed && !b.hasContributed) return -1;
+      if (!a.hasContributed && b.hasContributed) return 1;
+      return a.name.localeCompare(b.name, 'hi');
+    });
+
+    if (contributionMembers.length > 0) {
+      checkNewPage(30);
+      doc.setFontSize(13);
+      doc.setTextColor(16, 185, 129);
+      setFont(doc, 'bold');
+      doc.text('सदस्य मासिक अंशदान स्थिति / MEMBER CONTRIBUTION STATUS', margin, y);
+      y += 3;
+
+      autoTable(doc, {
+        startY: y,
+        head: [['क्र.', 'सदस्य का नाम / Member', 'मोबाइल / Mobile', 'अंशदान राशि (₹)', 'मासिक अंशदान स्थिति / Status']],
+        body: contributionMembers.map((m, idx) => [
+          (idx + 1).toString(),
+          m.name,
+          m.mobile || '—',
+          m.hasContributed ? formatPDFCurrency(m.totalContributed) : '₹0',
+          m.hasContributed ? '[✓] जमा (Paid)' : '[  ] बाकी (Pending)',
+        ]),
+        theme: 'grid',
+        headStyles: {
+          fillColor: [16, 185, 129],
+          textColor: 255,
+          fontStyle: 'bold',
+          fontSize: 7.5,
+          font: 'NotoSansDevanagari',
+        },
+        bodyStyles: {
+          fontSize: 7.5,
+          font: 'NotoSansDevanagari',
+        },
+        styles: {
+          cellPadding: 3,
+          font: 'NotoSansDevanagari',
+        },
+        margin: { left: margin, right: margin },
+      });
+
+      y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 12;
+    }
+  } else if (people.length > 0) {
     checkNewPage(30);
     doc.setFontSize(13);
     doc.setTextColor(245, 158, 11);
@@ -704,7 +788,7 @@ export function generateEventReportHTML(
     `;
   }).join('');
 
-  // People Rows
+  // People Rows (Used for standard non-contribution events)
   const peopleRows = people.map((p, idx) => {
     const net = p.moneyGiven - p.moneySpent;
     const netColor = net > 0 ? '#059669' : net < 0 ? '#dc2626' : '#64748b';
@@ -722,6 +806,111 @@ export function generateEventReportHTML(
         <td style="text-align: right; color: #4f46e5;">${formatPDFCurrency(p.moneyReceived)}</td>
         <td style="text-align: right; color: #dc2626; font-weight: 600;">${formatPDFCurrency(p.moneySpent)}</td>
         <td style="text-align: right; font-weight: 700; color: ${netColor};">${netText}</td>
+      </tr>
+    `;
+  }).join('');
+
+  // ============================================
+  // Contribution Members Logic (जब इवेंट टाइप contribution हो)
+  // ============================================
+  const isContribution = event.eventType === 'contribution';
+  const registeredPeople = getPeople();
+  const peopleMap = new Map<string, {
+    name: string;
+    mobile: string;
+    totalContributed: number;
+    hasContributed: boolean;
+    paymentMethods: string[];
+    paymentDates: string[];
+  }>();
+
+  if (isContribution) {
+    // 1. जिन व्यक्तियों को यूज़र ने सिस्टम में जोड़ा है (People tab)
+    registeredPeople.forEach(p => {
+      const key = p.name.trim().toLowerCase();
+      peopleMap.set(key, {
+        name: p.name.trim(),
+        mobile: p.mobile ? p.mobile.trim() : '',
+        totalContributed: 0,
+        hasContributed: false,
+        paymentMethods: [],
+        paymentDates: [],
+      });
+    });
+
+    // 2. इस इवेंट में प्राप्त अंशदान (moneyReceived) का मिलान
+    moneyReceived.forEach(m => {
+      const key = m.givenBy.trim().toLowerCase();
+      let member = peopleMap.get(key);
+      if (!member) {
+        member = {
+          name: m.givenBy.trim(),
+          mobile: '',
+          totalContributed: 0,
+          hasContributed: false,
+          paymentMethods: [],
+          paymentDates: [],
+        };
+        peopleMap.set(key, member);
+      }
+      member.totalContributed += m.amount;
+      member.hasContributed = true;
+      const modeHi = PAYMENT_LABELS[m.paymentMethod]?.hi || m.paymentMethod || 'नकद';
+      if (!member.paymentMethods.includes(modeHi)) {
+        member.paymentMethods.push(modeHi);
+      }
+      const formattedDate = formatDate(m.date);
+      if (!member.paymentDates.includes(formattedDate)) {
+        member.paymentDates.push(formattedDate);
+      }
+    });
+  }
+
+  const contributionMembers = Array.from(peopleMap.values()).sort((a, b) => {
+    // जमा करने वाले पहले, फिर बाकी वाले, फिर नाम अनुसार
+    if (a.hasContributed && !b.hasContributed) return -1;
+    if (!a.hasContributed && b.hasContributed) return 1;
+    return a.name.localeCompare(b.name, 'hi');
+  });
+
+  const totalContributionCollected = contributionMembers.reduce((sum, m) => sum + m.totalContributed, 0);
+  const paidCount = contributionMembers.filter(m => m.hasContributed).length;
+  const pendingCount = contributionMembers.filter(m => !m.hasContributed).length;
+
+  // Contribution Table Rows (लेना है या देना हटाकर टिक/बिना टिक का विकल्प)
+  const contributionRows = contributionMembers.map((m, idx) => {
+    const paymentInfo = m.hasContributed
+      ? `${m.paymentDates.join(', ')} (${m.paymentMethods.join(', ')})`
+      : '— (अंशदान बाकी)';
+
+    return `
+      <tr>
+        <td style="text-align: center; color: #64748b;">${idx + 1}</td>
+        <td>
+          <strong style="color: #0f172a; font-size: 13px;">${escapeHtml(m.name)}</strong>
+        </td>
+        <td style="color: #64748b; font-size: 11px;">
+          ${escapeHtml(m.mobile || '—')}
+        </td>
+        <td style="text-align: right; font-weight: 700; color: ${m.hasContributed ? '#059669' : '#94a3b8'};">
+          ${m.hasContributed ? formatPDFCurrency(m.totalContributed) : '₹0'}
+        </td>
+        <td style="font-size: 11px; color: #475569;">
+          ${escapeHtml(paymentInfo)}
+        </td>
+        <td style="text-align: center;">
+          ${m.hasContributed ? `
+            <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 11px; background: #ecfdf5; color: #059669; border: 1.5px solid #10b981;">
+              <span style="display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 3px; background: #10b981; color: #ffffff; font-size: 11px; font-weight: 900; line-height: 1;">✓</span>
+              <span>जमा (Paid)</span>
+            </div>
+          ` : `
+            <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 11px; background: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca;">
+              <span style="display: inline-block; width: 16px; height: 16px; border-radius: 3px; border: 1.5px solid #dc2626; background: #ffffff;"></span>
+              <span>बाकी (Pending)</span>
+            </div>
+          `}
+        </td>
       </tr>
     `;
   }).join('');
@@ -1162,26 +1351,29 @@ export function generateEventReportHTML(
     <!-- Summary KPI Cards -->
     <div class="summary-grid">
       <div class="summary-card opening">
-        <div class="summary-label">शुरुआती राशि / Opening</div>
+        <div class="summary-label">${isContribution ? 'शुरुआती फंड / Opening Fund' : 'शुरुआती राशि / Opening'}</div>
         <div class="summary-value">${formatPDFCurrency(summary.openingBalance)}</div>
       </div>
       <div class="summary-card received">
-        <div class="summary-label">कुल प्राप्त राशि / Received</div>
+        <div class="summary-label">${isContribution ? 'कुल अंशदान प्राप्त / Total Contribution' : 'कुल प्राप्त राशि / Received'}</div>
         <div class="summary-value">${formatPDFCurrency(summary.totalReceived)}</div>
       </div>
       <div class="summary-card spent">
-        <div class="summary-label">कुल खर्च / Spent</div>
+        <div class="summary-label">${isContribution ? 'कुल समूह खर्च / Group Expenses' : 'कुल खर्च / Spent'}</div>
         <div class="summary-value">${formatPDFCurrency(summary.totalSpent)}</div>
       </div>
       <div class="summary-card balance">
-        <div class="summary-label">शेष राशि / Net Balance</div>
+        <div class="summary-label">${isContribution ? 'बचा हुआ फंड / Net Fund Balance' : 'शेष राशि / Net Balance'}</div>
         <div class="summary-value">${formatPDFCurrency(summary.balance)}</div>
       </div>
     </div>
 
     <!-- Formula Strip -->
     <div class="formula-strip">
-      हिसाब समीकरण: शुरुआती राशि (${formatPDFCurrency(summary.openingBalance)}) + कुल प्राप्त (${formatPDFCurrency(summary.totalReceived)}) − कुल खर्च (${formatPDFCurrency(summary.totalSpent)}) = <strong>शुद्ध शेष राशि ${formatPDFCurrency(summary.balance)}</strong>
+      ${isContribution
+        ? `अंशदान हिसाब: शुरुआती फंड (${formatPDFCurrency(summary.openingBalance)}) + कुल अंशदान (${formatPDFCurrency(summary.totalReceived)}) − कुल समूह खर्च (${formatPDFCurrency(summary.totalSpent)}) = <strong>बचा हुआ फंड ${formatPDFCurrency(summary.balance)}</strong>`
+        : `हिसाब समीकरण: शुरुआती राशि (${formatPDFCurrency(summary.openingBalance)}) + कुल प्राप्त (${formatPDFCurrency(summary.totalReceived)}) − कुल खर्च (${formatPDFCurrency(summary.totalSpent)}) = <strong>शुद्ध शेष राशि ${formatPDFCurrency(summary.balance)}</strong>`
+      }
     </div>
 
     <!-- Category Breakdown Table -->
@@ -1217,7 +1409,7 @@ export function generateEventReportHTML(
 
     <!-- Money Received Ledger -->
     <div class="section-title">
-      <span>📥 पैसा प्राप्ति बही / Money Received Ledger</span>
+      <span>${isContribution ? '📥 सदस्य अंशदान बही / Member Contribution Ledger' : '📥 पैसा प्राप्ति बही / Money Received Ledger'}</span>
       <span class="count-badge">${moneyReceived.length} प्रविष्टियां</span>
     </div>
     ${moneyReceived.length > 0 ? `
@@ -1226,11 +1418,11 @@ export function generateEventReportHTML(
           <tr>
             <th style="width: 35px; text-align: center;">क्र.</th>
             <th style="width: 85px;">तारीख</th>
-            <th>देने वाले का नाम</th>
-            <th style="width: 100px; text-align: right;">राशि (₹)</th>
+            <th>${isContribution ? 'सदस्य का नाम (Member Name)' : 'देने वाले का नाम'}</th>
+            <th style="width: 100px; text-align: right;">${isContribution ? 'अंशदान राशि (₹)' : 'राशि (₹)'}</th>
             <th style="width: 75px;">माध्यम</th>
-            <th>विवरण / उद्देश्य</th>
-            <th style="width: 100px;">प्राप्तकर्ता</th>
+            <th>${isContribution ? 'माह / उद्देश्य / विवरण' : 'विवरण / उद्देश्य'}</th>
+            <th style="width: 100px;">${isContribution ? 'कोषाध्यक्ष / प्राप्तकर्ता' : 'प्राप्तकर्ता'}</th>
           </tr>
         </thead>
         <tbody>
@@ -1238,7 +1430,7 @@ export function generateEventReportHTML(
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="3" style="text-align: right;">कुल प्राप्त राशि / Total Received:</td>
+            <td colspan="3" style="text-align: right;">${isContribution ? 'कुल अंशदान जमा / Total Contribution:' : 'कुल प्राप्त राशि / Total Received:'}</td>
             <td style="text-align: right; color: #059669;">${formatPDFCurrency(summary.totalReceived)}</td>
             <td colspan="3"></td>
           </tr>
@@ -1248,7 +1440,7 @@ export function generateEventReportHTML(
 
     <!-- Expense Ledger -->
     <div class="section-title">
-      <span>📤 खर्च बही / Expense Ledger</span>
+      <span>${isContribution ? '🧾 समूह खर्च बही / Group Expense Ledger' : '📤 खर्च बही / Expense Ledger'}</span>
       <span class="count-badge">${expenses.length} प्रविष्टियां</span>
     </div>
     ${expenses.length > 0 ? `
@@ -1278,8 +1470,51 @@ export function generateEventReportHTML(
       </table>
     ` : '<p style="font-size:12px; color:#64748b; margin-bottom:16px;">कोई खर्च दर्ज नहीं है।</p>'}
 
-    <!-- People Summary -->
-    ${people.length > 0 ? `
+    <!-- People Summary / Member Contribution Checklist -->
+    ${isContribution ? `
+      <div class="section-title">
+        <span>👥 सदस्य मासिक अंशदान स्थिति / Member Monthly Contribution Status</span>
+        <span class="count-badge">${contributionMembers.length} सदस्य</span>
+      </div>
+      <div style="display: flex; gap: 12px; margin-bottom: 14px; flex-wrap: wrap;">
+        <div style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 8px; padding: 6px 14px; font-size: 12px; color: #065f46; display: flex; align-items: center; gap: 6px;">
+          <strong style="color: #059669; font-size: 14px;">✓</strong> <strong>जमा सदस्य:</strong> ${paidCount} व्यक्ति
+        </div>
+        <div style="background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 8px; padding: 6px 14px; font-size: 12px; color: #991b1b; display: flex; align-items: center; gap: 6px;">
+          <strong style="color: #dc2626; font-size: 14px;">☐</strong> <strong>बाकी सदस्य:</strong> ${pendingCount} व्यक्ति
+        </div>
+        <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 8px; padding: 6px 14px; font-size: 12px; color: #1e40af; display: flex; align-items: center; gap: 6px;">
+          <strong>💰 कुल अंशदान संग्रह:</strong> ${formatPDFCurrency(totalContributionCollected)}
+        </div>
+      </div>
+      ${contributionMembers.length > 0 ? `
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 35px; text-align: center;">क्र.</th>
+              <th>सदस्य का नाम (Member)</th>
+              <th style="width: 100px;">मोबाइल नंबर</th>
+              <th style="width: 110px; text-align: right;">अंशदान राशि (₹)</th>
+              <th style="width: 160px;">भुगतान तारीख व माध्यम</th>
+              <th style="width: 150px; text-align: center;">मासिक अंशदान स्थिति</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${contributionRows}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" style="text-align: right; font-weight: 700;">कुल अंशदान संग्रह / Total Collected:</td>
+              <td style="text-align: right; font-weight: 700; color: #059669; font-size: 13px;">${formatPDFCurrency(totalContributionCollected)}</td>
+              <td colspan="2" style="text-align: right; font-size: 11px; font-weight: 600;">
+                <span style="color: #059669; font-weight: 700;">✓ ${paidCount} जमा (Paid)</span> &nbsp;|&nbsp; 
+                <span style="color: #dc2626; font-weight: 700;">☐ ${pendingCount} बाकी (Pending)</span>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      ` : '<p style="font-size:12px; color:#64748b; margin-bottom:16px;">कोई सदस्य दर्ज नहीं है। कृपया "लोग" मेनू में सदस्य जोड़ें।</p>'}
+    ` : (people.length > 0 ? `
       <div class="section-title">
         <span>👥 व्यक्तिगत हिसाब सारांश / People Summary</span>
         <span class="count-badge">${people.length} व्यक्ति</span>
@@ -1299,18 +1534,18 @@ export function generateEventReportHTML(
           ${peopleRows}
         </tbody>
       </table>
-    ` : ''}
+    ` : '')}
 
     <!-- Verification & Signatures -->
     <div class="avoid-break signatures-block">
       <div class="sig-box">
         <div class="sig-line"></div>
-        <div class="sig-label">जिम्मेदार व्यक्ति के हस्ताक्षर</div>
-        <div class="sig-sub">${escapeHtml(event.responsiblePerson || 'हस्ताक्षर')}</div>
+        <div class="sig-label">${isContribution ? 'कोषाध्यक्ष / जिम्मेदार सदस्य' : 'जिम्मेदार व्यक्ति के हस्ताक्षर'}</div>
+        <div class="sig-sub">${escapeHtml(event.responsiblePerson || (isContribution ? 'कोषाध्यक्ष' : 'हस्ताक्षर'))}</div>
       </div>
       <div class="sig-box">
         <div class="sig-line"></div>
-        <div class="sig-label">हिसाब जांचकर्ता / कोषाध्यक्ष</div>
+        <div class="sig-label">${isContribution ? 'अध्यक्ष / सचिव के हस्ताक्षर' : 'हिसाब जांचकर्ता / कोषाध्यक्ष'}</div>
         <div class="sig-sub">हस्ताक्षर व मुहर</div>
       </div>
     </div>

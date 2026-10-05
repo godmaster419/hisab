@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import {
   getEvent, getEventSummary, getMoneyReceivedByEvent, getExpensesByEvent,
-  getTransactionHistory, getCategorySummary, getPersonSummary,
+  getTransactionHistory, getCategorySummary, getPersonSummary, getPeople,
   deleteMoneyReceived, deleteExpense, deleteEvent,
 } from '@/store';
 import { formatCurrency, formatDate, CATEGORY_LABELS, PAYMENT_LABELS, getCategoryColor } from '@/utils/helpers';
@@ -126,6 +126,57 @@ function EventDetailContent() {
   const typeConfig = getEventTypeConfig(event.eventType);
   const isDukandar = event.eventType === 'dukandar_diary';
   const isContribution = event.eventType === 'contribution';
+
+  // For contribution events: compute full checklist of added members
+  const contributionMembers = (() => {
+    if (!isContribution) return [];
+    const registeredPeople = getPeople();
+    const map = new Map<string, {
+      name: string;
+      mobile: string;
+      totalContributed: number;
+      hasContributed: boolean;
+      transactions: MoneyReceived[];
+    }>();
+
+    registeredPeople.forEach(p => {
+      const key = p.name.trim().toLowerCase();
+      map.set(key, {
+        name: p.name.trim(),
+        mobile: p.mobile ? p.mobile.trim() : '',
+        totalContributed: 0,
+        hasContributed: false,
+        transactions: [],
+      });
+    });
+
+    money.forEach(m => {
+      const key = m.givenBy.trim().toLowerCase();
+      let mem = map.get(key);
+      if (!mem) {
+        mem = {
+          name: m.givenBy.trim(),
+          mobile: '',
+          totalContributed: 0,
+          hasContributed: false,
+          transactions: [],
+        };
+        map.set(key, mem);
+      }
+      mem.totalContributed += m.amount;
+      mem.hasContributed = true;
+      mem.transactions.push(m);
+    });
+
+    return Array.from(map.values()).sort((a, b) => {
+      if (a.hasContributed && !b.hasContributed) return -1;
+      if (!a.hasContributed && b.hasContributed) return 1;
+      return a.name.localeCompare(b.name, 'hi');
+    });
+  })();
+
+  const paidMembersCount = contributionMembers.filter(m => m.hasContributed).length;
+  const pendingMembersCount = contributionMembers.filter(m => !m.hasContributed).length;
 
   return (
     <AppLayout>
@@ -648,12 +699,142 @@ function EventDetailContent() {
             <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>
               {isDukandar ? '👥 ग्राहक खाता बही (Customers Khata Ledger)' : isContribution ? '👥 सदस्य अंशदान सूची (Members)' : '👥 लोग / People'}
             </h3>
-            {people.length === 0 ? (
+            {isContribution ? (
+              <div>
+                {/* Contribution Summary Stats */}
+                <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+                  <div style={{
+                    padding: '8px 16px',
+                    borderRadius: 10,
+                    background: 'rgba(16, 185, 129, 0.1)',
+                    border: '1px solid rgba(16, 185, 129, 0.25)',
+                    display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#059669', fontWeight: 600,
+                  }}>
+                    <span style={{ fontSize: 16 }}>✓</span>
+                    <span>जमा सदस्य: <strong>{paidMembersCount}</strong> व्यक्ति</span>
+                  </div>
+                  <div style={{
+                    padding: '8px 16px',
+                    borderRadius: 10,
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid rgba(239, 68, 68, 0.25)',
+                    display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#dc2626', fontWeight: 600,
+                  }}>
+                    <span style={{ fontSize: 16 }}>☐</span>
+                    <span>बाकी सदस्य: <strong>{pendingMembersCount}</strong> व्यक्ति</span>
+                  </div>
+                  <div style={{
+                    padding: '8px 16px',
+                    borderRadius: 10,
+                    background: 'rgba(99, 102, 241, 0.1)',
+                    border: '1px solid rgba(99, 102, 241, 0.25)',
+                    display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--brand-primary)', fontWeight: 600,
+                  }}>
+                    <span>💰 कुल अंशदान संग्रह: <strong>{formatCurrency(summary.totalReceived)}</strong></span>
+                  </div>
+                </div>
+
+                {contributionMembers.length === 0 ? (
+                  <div className="card">
+                    <div className="empty-state">
+                      <div className="empty-state-icon"><Users size={32} /></div>
+                      <h3 className="empty-state-title">कोई सदस्य नहीं मिला</h3>
+                      <p className="empty-state-text">
+                        कृपया &apos;लोग / People&apos; पेज पर जाकर सदस्यों को जोड़ें।
+                      </p>
+                      <Link href="/people" className="btn btn-primary btn-sm" style={{ marginTop: 12 }}>
+                        <Users size={15} /> सदस्य जोड़ें
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: 16 }}>
+                    {contributionMembers.map((m) => (
+                      <div
+                        key={m.name}
+                        className="card"
+                        style={{
+                          padding: 18,
+                          borderLeft: `5px solid ${m.hasContributed ? '#10b981' : '#f59e0b'}`,
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{
+                              width: 42, height: 42, borderRadius: '50%',
+                              background: m.hasContributed ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-secondary)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              color: m.hasContributed ? '#059669' : 'var(--text-secondary)',
+                              fontWeight: 700, fontSize: 16,
+                            }}>
+                              {m.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <h4 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>{m.name}</h4>
+                              <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: '2px 0 0 0' }}>
+                                {m.mobile ? `📱 ${m.mobile}` : 'मोबाइल दर्ज नहीं'}
+                              </p>
+                            </div>
+                          </div>
+                          <span style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            padding: '3px 8px',
+                            borderRadius: 6,
+                            background: m.hasContributed ? '#ecfdf5' : '#fef2f2',
+                            color: m.hasContributed ? '#059669' : '#dc2626',
+                            border: `1px solid ${m.hasContributed ? '#a7f3d0' : '#fecaca'}`,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                          }}>
+                            {m.hasContributed ? '✓ जमा (Paid)' : '☐ बाकी (Pending)'}
+                          </span>
+                        </div>
+
+                        <div style={{
+                          padding: '10px 14px',
+                          background: 'var(--bg-secondary)',
+                          borderRadius: 8,
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}>
+                          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>मासिक अंशदान:</span>
+                          <span style={{
+                            fontSize: 15,
+                            fontWeight: 700,
+                            color: m.hasContributed ? '#059669' : 'var(--text-tertiary)',
+                          }}>
+                            {m.hasContributed ? formatCurrency(m.totalContributed) : '₹0 (बाकी)'}
+                          </span>
+                        </div>
+
+                        {!m.hasContributed && (
+                          <div style={{ marginTop: 12, textAlign: 'right' }}>
+                            <button
+                              onClick={() => {
+                                setEditMoney(null);
+                                setShowAddMoney(true);
+                              }}
+                              className="btn btn-sm btn-outline"
+                              style={{ width: '100%', justifyContent: 'center' }}
+                            >
+                              <Plus size={14} /> अंशदान दर्ज करें
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : people.length === 0 ? (
               <div className="card">
                 <div className="empty-state">
                   <div className="empty-state-icon"><Users size={32} /></div>
                   <h3 className="empty-state-title">
-                    {isDukandar ? 'कोई ग्राहक खाता नहीं है' : isContribution ? 'कोई सदस्य नहीं है' : 'कोई व्यक्ति नहीं है'}
+                    {isDukandar ? 'कोई ग्राहक खाता नहीं है' : 'कोई व्यक्ति नहीं है'}
                   </h3>
                   <p className="empty-state-text">
                     {isDukandar ? 'सामान देने या जमा राशि दर्ज करने पर ग्राहकों का हिसाब यहाँ दिखेगा' : 'लेनदेन जोड़ने पर लोगों की जानकारी यहाँ दिखेगी'}
@@ -717,7 +898,7 @@ function EventDetailContent() {
                       ) : (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
                           <div style={{ textAlign: 'center', padding: 8, background: 'var(--income-bg)', borderRadius: 8 }}>
-                            <p style={{ fontSize: 10, color: 'var(--income-color)', fontWeight: 500 }}>{isContribution ? 'अंशदान दिया' : 'दिया / Given'}</p>
+                            <p style={{ fontSize: 10, color: 'var(--income-color)', fontWeight: 500 }}>दिया / Given</p>
                             <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--income-color)' }}>{formatCurrency(p.moneyGiven)}</p>
                           </div>
                           <div style={{ textAlign: 'center', padding: 8, background: 'var(--brand-primary-light)', borderRadius: 8 }}>

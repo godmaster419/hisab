@@ -34,7 +34,6 @@ interface NavItem {
 
 const sidebarLinks: NavItem[] = [
   { href: '/', label: 'Dashboard', labelHi: 'डैशबोर्ड', icon: LayoutDashboard },
-  { href: '/contributions', label: 'Contributions', labelHi: 'कंट्रीब्यूशन', icon: Coins },
   { href: '/events', label: 'Events', labelHi: 'इवेंट', icon: Calendar },
   { href: '/people', label: 'People', labelHi: 'लोग', icon: Users },
   { href: '/reports', label: 'Reports', labelHi: 'रिपोर्ट', icon: BarChart3 },
@@ -43,10 +42,10 @@ const sidebarLinks: NavItem[] = [
 
 const bottomNavLinks: NavItem[] = [
   { href: '/', label: 'होम', icon: Home },
-  { href: '/contributions', label: 'कंट्रीब्यूशन', icon: Coins },
+  { href: '/events', label: 'इवेंट्स', icon: Calendar },
   { href: '/events/new', label: 'नया', icon: Plus, isSpecial: true },
+  { href: '/people', label: 'लोग', icon: Users },
   { href: '/reports', label: 'रिपोर्ट', icon: FileText },
-  { href: '/settings', label: 'सेटिंग', icon: Settings },
 ];
 
 export default function AppLayout({ children }: AppLayoutProps) {

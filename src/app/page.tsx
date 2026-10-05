@@ -16,6 +16,7 @@ import {
   Trash2,
   Sparkles,
   Coins,
+  Users,
   CheckCircle2,
   Clock,
   ChevronLeft,
@@ -123,9 +124,9 @@ export default function DashboardPage() {
             <p className="page-subtitle">इवेंट और मासिक कंट्रीब्यूशन का पूरा हिसाब देखें</p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Link href="/contributions" className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <Coins size={16} />
-              <span>मासिक कंट्रीब्यूशन</span>
+            <Link href="/people" className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Users size={16} />
+              <span>सदस्य / लोग</span>
             </Link>
             <Link href="/events/new" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <Plus size={18} />
@@ -311,8 +312,8 @@ export default function DashboardPage() {
                     <ChevronRight size={16} />
                   </button>
 
-                  <Link href="/contributions" className="btn btn-sm btn-primary" style={{ marginLeft: 8 }}>
-                    रजिस्टर खोलें <ArrowRight size={14} />
+                  <Link href="/events" className="btn btn-sm btn-primary" style={{ marginLeft: 8 }}>
+                    इवेंट्स देखें <ArrowRight size={14} />
                   </Link>
                 </div>
               </div>
@@ -546,8 +547,8 @@ export default function DashboardPage() {
               <Link href="/events/new" className="btn btn-sm btn-secondary">
                 <Calendar size={15} /> नया Event बनाएँ
               </Link>
-              <Link href="/contributions" className="btn btn-sm btn-secondary">
-                <Coins size={15} /> मासिक कंट्रीब्यूशन
+              <Link href="/people" className="btn btn-sm btn-secondary">
+                <Users size={15} /> सदस्य / लोग
               </Link>
               <Link href="/reports" className="btn btn-sm btn-secondary">
                 <BarChart3 size={15} /> रिपोर्ट देखें
