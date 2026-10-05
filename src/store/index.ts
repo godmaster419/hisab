@@ -7,20 +7,26 @@ import {
   HisabPerson,
   MoneyReceived,
   Expense,
-  ExpenseItem,
   EventSummary,
   CategorySummary,
   PersonSummary,
   AppSettings,
   DEFAULT_SETTINGS,
   ExpenseCategory,
+  MonthlyEntry,
+  MonthlySummary,
 } from '@/types';
-import { generateId, getTodayDate } from '@/utils/helpers';
+import {
+  generateId,
+  formatHindiMonth,
+  getPreviousMonthStr,
+} from '@/utils/helpers';
 
 const KEYS = {
   EVENTS: 'hisab_events',
   MONEY: 'hisab_money_received',
   EXPENSES: 'hisab_expenses',
+  MONTHLY: 'hisab_monthly_entries',
   SETTINGS: 'hisab_settings',
   PEOPLE_CACHE: 'hisab_people_cache',
   PEOPLE: 'hisab_people',
@@ -64,6 +70,7 @@ export function getEvent(id: string): HisabEvent | undefined {
 export function createEvent(data: Omit<HisabEvent, 'id' | 'createdAt' | 'updatedAt' | 'isArchived'>): HisabEvent {
   const event: HisabEvent = {
     ...data,
+    eventType: data.eventType || 'len_den',
     id: generateId(),
     isArchived: false,
     createdAt: new Date().toISOString(),
@@ -125,13 +132,19 @@ export function deleteDemoData(): void {
   // Remove demo people
   const people = getPeople().filter((p) => !p.isDemo);
   setItem(KEYS.PEOPLE, people);
+  // Remove demo monthly entries
+  const monthly = getMonthlyEntries().filter((m) => !m.isDemo && !m.id.startsWith('demo-'));
+  setItem(KEYS.MONTHLY, monthly);
   // Mark demo data as deleted so it won't be recreated
   const settings = getSettings();
   updateSettings({ ...settings, demoDataDeleted: true });
 }
 
 export function hasDemoData(): boolean {
-  return getEvents().some((e) => e.isDemo);
+  return (
+    getEvents().some((e) => e.isDemo) ||
+    getMonthlyEntries().some((e) => e.isDemo || e.id.startsWith('demo-'))
+  );
 }
 
 // ============================================
@@ -656,16 +669,18 @@ export function exportAllData() {
     moneyReceived: getAllMoneyReceived(),
     expenses: getAllExpenses(),
     people: getPeople(),
+    monthlyEntries: getMonthlyEntries(),
     settings: getSettings(),
     peopleCache: getPeopleCache(),
   };
 }
 
-export function importData(data: ReturnType<typeof exportAllData>): boolean {
+export function importData(data: ReturnType<typeof exportAllData> & { monthlyEntries?: MonthlyEntry[] }): boolean {
   try {
     if (data.events) setItem(KEYS.EVENTS, data.events);
     if (data.moneyReceived) setItem(KEYS.MONEY, data.moneyReceived);
     if (data.expenses) setItem(KEYS.EXPENSES, data.expenses);
+    if (data.monthlyEntries) setItem(KEYS.MONTHLY, data.monthlyEntries);
     if (data.settings) setItem(KEYS.SETTINGS, data.settings);
     if (data.peopleCache) setItem(KEYS.PEOPLE_CACHE, data.peopleCache);
     if ((data as { people?: HisabPerson[] }).people) setItem(KEYS.PEOPLE, (data as { people: HisabPerson[] }).people);
@@ -673,6 +688,220 @@ export function importData(data: ReturnType<typeof exportAllData>): boolean {
   } catch {
     return false;
   }
+}
+
+// ============================================
+// MONTHLY CONTRIBUTIONS MANAGEMENT & BALANCE ROLLOVER
+// ============================================
+
+export const INITIAL_MONTHLY_DEMO_DATA: MonthlyEntry[] = [
+  {
+    id: 'demo-m1',
+    type: 'contribution',
+    memberName: 'राहुल शर्मा',
+    title: 'अक्टूबर 2026 मासिक अंशदान',
+    status: 'paid',
+    amount: 1000,
+    collectedBy: 'अमित वर्मा',
+    spentBy: '-',
+    location: '-',
+    date: '2026-10-01',
+    note: 'GPay द्वारा भुगतान',
+    isDemo: true,
+    createdAt: '2026-10-01T10:00:00.000Z',
+  },
+  {
+    id: 'demo-m2',
+    type: 'contribution',
+    memberName: 'सुरेश पटेल',
+    title: 'अक्टूबर 2026 मासिक अंशदान',
+    status: 'unpaid',
+    amount: 1000,
+    collectedBy: 'अमित वर्मा',
+    spentBy: '-',
+    location: '-',
+    date: '2026-10-02',
+    note: 'सैलरी आने के बाद देंगे',
+    isDemo: true,
+    createdAt: '2026-10-02T10:00:00.000Z',
+  },
+  {
+    id: 'demo-m3',
+    type: 'contribution',
+    memberName: 'विकास गुप्ता',
+    title: 'अक्टूबर 2026 मासिक अंशदान',
+    status: 'paid',
+    amount: 1000,
+    collectedBy: 'रोहित सिंह',
+    spentBy: '-',
+    location: '-',
+    date: '2026-10-03',
+    note: 'नकद जमा',
+    isDemo: true,
+    createdAt: '2026-10-03T10:00:00.000Z',
+  },
+  {
+    id: 'demo-m4',
+    type: 'expense',
+    memberName: '-',
+    title: 'समिति मीटिंग स्नैक्स व चाय',
+    status: 'paid',
+    amount: 850,
+    collectedBy: '-',
+    spentBy: 'अमित वर्मा',
+    location: 'शर्मा जी चाय कॉर्नर',
+    date: '2026-10-02',
+    note: 'मासिक योजना बैठक',
+    isDemo: true,
+    createdAt: '2026-10-02T16:00:00.000Z',
+  },
+  {
+    id: 'demo-m5',
+    type: 'expense',
+    memberName: '-',
+    title: 'स्टेशनरी व रजिस्टर खरीदारी',
+    status: 'paid',
+    amount: 450,
+    collectedBy: '-',
+    spentBy: 'रोहित सिंह',
+    location: 'स्टेशनरी मार्ट',
+    date: '2026-10-03',
+    note: 'नया हिसाब रजिस्टर',
+    isDemo: true,
+    createdAt: '2026-10-03T11:00:00.000Z',
+  },
+];
+
+export function getMonthlyEntries(): MonthlyEntry[] {
+  const entries = getItem<MonthlyEntry[]>(KEYS.MONTHLY, []);
+  if (entries.length === 0) {
+    const settings = getSettings();
+    if (!settings.demoDataDeleted) {
+      setItem(KEYS.MONTHLY, INITIAL_MONTHLY_DEMO_DATA);
+      return INITIAL_MONTHLY_DEMO_DATA;
+    }
+  }
+  return entries;
+}
+
+export function saveMonthlyEntries(entries: MonthlyEntry[]): void {
+  setItem(KEYS.MONTHLY, entries);
+}
+
+export function addMonthlyEntry(data: Omit<MonthlyEntry, 'id' | 'createdAt'>): MonthlyEntry {
+  const entry: MonthlyEntry = {
+    ...data,
+    id: 'entry_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+    createdAt: new Date().toISOString(),
+  };
+  const entries = getMonthlyEntries();
+  const updated = [entry, ...entries];
+  saveMonthlyEntries(updated);
+  if (data.memberName && data.memberName !== '-') cachePerson(data.memberName);
+  if (data.collectedBy && data.collectedBy !== '-') cachePerson(data.collectedBy);
+  if (data.spentBy && data.spentBy !== '-') cachePerson(data.spentBy);
+  return entry;
+}
+
+export function updateMonthlyEntry(id: string, data: Partial<MonthlyEntry>): MonthlyEntry | null {
+  const entries = getMonthlyEntries();
+  const index = entries.findIndex((e) => e.id === id);
+  if (index === -1) return null;
+  entries[index] = { ...entries[index], ...data };
+  saveMonthlyEntries(entries);
+  return entries[index];
+}
+
+export function deleteMonthlyEntry(id: string): void {
+  const entries = getMonthlyEntries().filter((e) => e.id !== id);
+  saveMonthlyEntries(entries);
+}
+
+/**
+ * Calculate previous months' remaining balance (पिछले महीने की बची हुई राशि)
+ * This calculates all net savings before targetMonth.
+ */
+export function calculatePreviousMonthBalance(
+  targetMonth: string,
+  entriesList?: MonthlyEntry[]
+): {
+  balance: number;
+  previousMonthStr: string;
+  previousMonthLabel: string;
+  hasPriorData: boolean;
+} {
+  if (!targetMonth || targetMonth === 'all') {
+    return { balance: 0, previousMonthStr: '', previousMonthLabel: '', hasPriorData: false };
+  }
+
+  const allEntries = entriesList || getMonthlyEntries();
+  const priorEntries = allEntries.filter((e) => e.date && e.date.substring(0, 7) < targetMonth);
+
+  const prevPaid = priorEntries
+    .filter((e) => e.type === 'contribution' && e.status === 'paid')
+    .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+
+  const prevSpent = priorEntries
+    .filter((e) => e.type === 'expense')
+    .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+
+  const balance = prevPaid - prevSpent;
+  const prevMonthStr = getPreviousMonthStr(targetMonth);
+  const prevMonthLabel = formatHindiMonth(prevMonthStr);
+
+  return {
+    balance,
+    previousMonthStr: prevMonthStr,
+    previousMonthLabel: prevMonthLabel,
+    hasPriorData: priorEntries.length > 0,
+  };
+}
+
+/**
+ * Get unified summary for a specific month or all months
+ */
+export function getMonthlySummary(
+  targetMonth: string,
+  includePreviousBalance: boolean = true,
+  entriesList?: MonthlyEntry[]
+): MonthlySummary {
+  const allEntries = entriesList || getMonthlyEntries();
+  const isAll = !targetMonth || targetMonth === 'all';
+  const monthEntries = isAll
+    ? allEntries
+    : allEntries.filter((e) => e.date && e.date.startsWith(targetMonth));
+
+  const totalCollected = monthEntries
+    .filter((e) => e.type === 'contribution' && e.status === 'paid')
+    .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+
+  const totalUnpaid = monthEntries
+    .filter((e) => e.type === 'contribution' && e.status === 'unpaid')
+    .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+
+  const totalSpent = monthEntries
+    .filter((e) => e.type === 'expense')
+    .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+
+  const prevInfo = calculatePreviousMonthBalance(targetMonth, allEntries);
+  const previousRemainingBalance = !isAll && includePreviousBalance ? prevInfo.balance : 0;
+  const totalAvailable = previousRemainingBalance + totalCollected;
+  const netBalance = totalAvailable - totalSpent;
+
+  return {
+    selectedMonth: targetMonth,
+    previousRemainingBalance,
+    previousMonthStr: prevInfo.previousMonthStr,
+    previousMonthLabel: prevInfo.previousMonthLabel,
+    totalCollected,
+    totalUnpaid,
+    totalSpent,
+    totalAvailable,
+    netBalance,
+    paidCount: monthEntries.filter((e) => e.type === 'contribution' && e.status === 'paid').length,
+    unpaidCount: monthEntries.filter((e) => e.type === 'contribution' && e.status === 'unpaid').length,
+    expenseCount: monthEntries.filter((e) => e.type === 'expense').length,
+  };
 }
 
 // ============================================
@@ -691,6 +920,7 @@ export function loadSampleData(): void {
   const event: HisabEvent = {
     id: eventId,
     name: 'Annual Function 2026 (Demo)',
+    eventType: 'len_den',
     startDate: '2026-09-25',
     endDate: '2026-09-27',
     description: 'School Annual Function and Cultural Program',
@@ -705,11 +935,12 @@ export function loadSampleData(): void {
   const event2Id = generateId();
   const event2: HisabEvent = {
     id: event2Id,
-    name: 'Sports Day 2026 (Demo)',
-    startDate: '2026-10-15',
-    endDate: '2026-10-15',
-    description: 'Annual Sports Day Competition',
-    responsiblePerson: 'अमित सिंह',
+    name: 'समाज सेवा कल्याण अंशदान (Demo)',
+    eventType: 'contribution',
+    startDate: '2026-10-01',
+    endDate: '2026-10-31',
+    description: 'मासिक समिति अंशदान और ग्रुप फंड हिसाब',
+    responsiblePerson: 'अमित सिंह (कोषाध्यक्ष)',
     openingBalance: 0,
     isArchived: false,
     isDemo: true,
@@ -717,7 +948,23 @@ export function loadSampleData(): void {
     updatedAt: '2026-10-01T10:00:00Z',
   };
 
-  setItem(KEYS.EVENTS, [event, event2]);
+  const event3Id = generateId();
+  const event3: HisabEvent = {
+    id: event3Id,
+    name: 'किराना स्टोर ग्राहक डायरी (Demo)',
+    eventType: 'dukandar_diary',
+    startDate: '2026-10-01',
+    endDate: '2026-10-31',
+    description: 'दुकानदार डायरी - ग्राहकों को सामान लेन-देन और उधारी-जमा हिसाब',
+    responsiblePerson: 'रमेश किराना स्टोर',
+    openingBalance: 0,
+    isArchived: false,
+    isDemo: true,
+    createdAt: '2026-10-01T08:00:00Z',
+    updatedAt: '2026-10-01T08:00:00Z',
+  };
+
+  setItem(KEYS.EVENTS, [event, event2, event3]);
 
   const moneyEntries: MoneyReceived[] = [
     {
@@ -740,14 +987,23 @@ export function loadSampleData(): void {
       id: generateId(), eventId, amount: 6000, givenBy: 'मनोज गुप्ता', depositedWith: 'अमित सिंह',
       date: '2026-09-26', purpose: 'अतिथि व्यवस्था', paymentMethod: 'bank_transfer', note: 'Bank से transfer किया', isDemo: true, createdAt: '2026-09-26T10:00:00Z',
     },
-    // Sports Day entries
+    // Contribution demo entries
     {
       id: generateId(), eventId: event2Id, amount: 3000, givenBy: 'राहुल वर्मा', depositedWith: 'अमित सिंह',
-      date: '2026-10-10', purpose: 'Sports Fund', paymentMethod: 'cash', note: '', isDemo: true, createdAt: '2026-10-10T10:00:00Z',
+      date: '2026-10-10', purpose: 'मासिक अंशदान', paymentMethod: 'cash', note: '', isDemo: true, createdAt: '2026-10-10T10:00:00Z',
     },
     {
       id: generateId(), eventId: event2Id, amount: 2000, givenBy: 'दीपक जायसवाल', depositedWith: 'अमित सिंह',
-      date: '2026-10-10', purpose: 'Sports Fund', paymentMethod: 'upi', note: '', isDemo: true, createdAt: '2026-10-10T11:00:00Z',
+      date: '2026-10-10', purpose: 'मासिक अंशदान', paymentMethod: 'upi', note: '', isDemo: true, createdAt: '2026-10-10T11:00:00Z',
+    },
+    // Dukandar Diary demo entries (Customer Jama / Payment)
+    {
+      id: generateId(), eventId: event3Id, amount: 1500, givenBy: 'सुरेश कुमार (ग्राहक)', depositedWith: 'रमेश किराना स्टोर',
+      date: '2026-10-04', purpose: 'खाता जमा / Payment Received', paymentMethod: 'upi', note: 'GPay से जमा', isDemo: true, createdAt: '2026-10-04T12:00:00Z',
+    },
+    {
+      id: generateId(), eventId: event3Id, amount: 1000, givenBy: 'विकास गुप्ता (ग्राहक)', depositedWith: 'रमेश किराना स्टोर',
+      date: '2026-10-05', purpose: 'उधारी चुकाया / Cash Payment', paymentMethod: 'cash', note: '', isDemo: true, createdAt: '2026-10-05T15:00:00Z',
     },
   ];
   setItem(KEYS.MONEY, moneyEntries);
@@ -811,6 +1067,27 @@ export function loadSampleData(): void {
       items: [
         { id: generateId(), itemName: 'क्रिकेट बॉल', quantity: 6, unit: 'piece', rate: 100, total: 600 },
         { id: generateId(), itemName: 'बैट', quantity: 2, unit: 'piece', rate: 450, total: 900 },
+      ],
+    },
+    // Dukandar Diary demo expenses (Saman Diya / Goods Given on Credit)
+    {
+      id: generateId(), eventId: event3Id, amount: 2800, spentBy: 'रमेश किराना स्टोर', paidTo: 'सुरेश कुमार (ग्राहक)',
+      date: '2026-10-02', category: 'shopping', purpose: 'राशन सामग्री - दाल, चावल, तेल (उधारी)',
+      paymentMethod: 'other', note: 'उधारी खाता में दर्ज', isDemo: true, createdAt: '2026-10-02T11:00:00Z',
+      items: [
+        { id: generateId(), itemName: 'बासमती चावल', quantity: 10, unit: 'kg', rate: 90, total: 900 },
+        { id: generateId(), itemName: 'अरहर दाल', quantity: 5, unit: 'kg', rate: 160, total: 800 },
+        { id: generateId(), itemName: 'सरसों तेल', quantity: 5, unit: 'litre', rate: 140, total: 700 },
+        { id: generateId(), itemName: 'शक्कर', quantity: 8, unit: 'kg', rate: 50, total: 400 },
+      ],
+    },
+    {
+      id: generateId(), eventId: event3Id, amount: 1450, spentBy: 'रमेश किराना स्टोर', paidTo: 'विकास गुप्ता (ग्राहक)',
+      date: '2026-10-03', category: 'shopping', purpose: 'किराना सामान (उधारी)',
+      paymentMethod: 'other', note: '', isDemo: true, createdAt: '2026-10-03T16:00:00Z',
+      items: [
+        { id: generateId(), itemName: 'आटा बैग', quantity: 2, unit: 'bag', rate: 400, total: 800 },
+        { id: generateId(), itemName: 'मसाले व चायपत्ती', quantity: 1, unit: 'packet', rate: 650, total: 650 },
       ],
     },
   ];

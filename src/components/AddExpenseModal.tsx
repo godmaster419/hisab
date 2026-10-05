@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, ShoppingCart } from 'lucide-react';
-import { Expense, ExpenseItem, PAYMENT_METHODS, EXPENSE_CATEGORIES, ITEM_UNITS, PURPOSE_SUGGESTIONS } from '@/types';
+import { Expense, ExpenseItem, PAYMENT_METHODS, EXPENSE_CATEGORIES, ITEM_UNITS, PURPOSE_SUGGESTIONS, HisabEventType } from '@/types';
 import { addExpense, updateExpense } from '@/store';
 import { getTodayDate, generateId } from '@/utils/helpers';
 import { useToast } from '@/components/Toast';
@@ -13,6 +13,7 @@ interface AddExpenseModalProps {
   isOpen: boolean;
   onClose: () => void;
   eventId: string;
+  eventType?: HisabEventType;
   editData?: Expense | null;
   onSaved: () => void;
 }
@@ -26,7 +27,7 @@ const emptyItem = (): ExpenseItem => ({
   total: 0,
 });
 
-export default function AddExpenseModal({ isOpen, onClose, eventId, editData, onSaved }: AddExpenseModalProps) {
+export default function AddExpenseModal({ isOpen, onClose, eventId, eventType, editData, onSaved }: AddExpenseModalProps) {
   const { showToast } = useToast();
   const [form, setForm] = useState({
     amount: '',
@@ -155,6 +156,35 @@ export default function AddExpenseModal({ isOpen, onClose, eventId, editData, on
     onClose();
   };
 
+  const isDukandar = eventType === 'dukandar_diary';
+  const isContribution = eventType === 'contribution';
+
+  const modalTitle = editData
+    ? (isDukandar ? '✏️ सामान/उधारी एडिट करें' : isContribution ? '✏️ समूह खर्च एडिट करें' : '✏️ खर्च एडिट करें')
+    : (isDukandar ? '🛒 ग्राहक को सामान दिया / उधारी दर्ज करें (Udhar)' : isContribution ? '🧾 समूह खर्च जोड़ें / Group Expense' : '🧾 खर्च जोड़ें / Add Expense');
+
+  const amountLabel = isDukandar
+    ? 'सामान की कुल कीमत / Total Amount (उधारी) *'
+    : isContribution
+    ? 'खर्च राशि / Expense Amount *'
+    : 'खर्च राशि / Expense Amount *';
+
+  const spentByLabel = isDukandar
+    ? 'दुकानदार / देने वाला / Given By *'
+    : isContribution
+    ? 'खर्च करने वाला सदस्य / Spent By Member *'
+    : 'खर्च करने वाला / Spent By *';
+
+  const spentByPlaceholder = isDukandar ? 'जैसे: दुकानदार / दुकान का नाम' : isContribution ? 'जैसे: राजेश कुमार (सदस्य)' : 'जैसे: राजेश कुमार';
+
+  const paidToLabel = isDukandar
+    ? 'ग्राहक का नाम (सामान लेने वाला) / Customer Name (Udhar) *'
+    : isContribution
+    ? 'किसे भुगतान किया / Paid To (Vendor/Person) *'
+    : 'पैसा प्राप्त करने वाला / Paid To *';
+
+  const paidToPlaceholder = isDukandar ? 'जैसे: रमेश कुमार (ग्राहक)' : isContribution ? 'जैसे: शर्मा टेंट हाउस' : 'जैसे: शर्मा टेंट हाउस';
+
   if (!isOpen) return null;
 
   return (
@@ -162,7 +192,7 @@ export default function AddExpenseModal({ isOpen, onClose, eventId, editData, on
       <div className="modal-content" style={{ maxWidth: 700 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2 style={{ fontSize: 18, fontWeight: 600 }}>
-            {editData ? '✏️ खर्च एडिट करें' : '🧾 खर्च जोड़ें / Add Expense'}
+            {modalTitle}
           </h2>
           <button className="btn btn-icon btn-ghost" onClick={onClose}>
             <X size={20} />
@@ -173,7 +203,7 @@ export default function AddExpenseModal({ isOpen, onClose, eventId, editData, on
           <div className="modal-body">
             {/* Amount */}
             <div className="form-group">
-              <label className="form-label">खर्च राशि / Expense Amount *</label>
+              <label className="form-label">{amountLabel}</label>
               <div style={{ position: 'relative' }}>
                 <span className="currency-symbol">₹</span>
                 <input
@@ -192,11 +222,11 @@ export default function AddExpenseModal({ isOpen, onClose, eventId, editData, on
             <div className="grid-2">
               {/* Spent By */}
               <div className="form-group">
-                <label className="form-label">खर्च करने वाला / Spent By *</label>
+                <label className="form-label">{spentByLabel}</label>
                 <AutocompleteInput
                   value={form.spentBy}
                   onChange={(val) => setForm({ ...form, spentBy: val })}
-                  placeholder="जैसे: राजेश कुमार"
+                  placeholder={spentByPlaceholder}
                   onAddNew={() => setAddPersonFor('spentBy')}
                 />
                 {errors.spentBy && <div className="form-error">{errors.spentBy}</div>}
@@ -204,11 +234,11 @@ export default function AddExpenseModal({ isOpen, onClose, eventId, editData, on
 
               {/* Paid To */}
               <div className="form-group">
-                <label className="form-label">पैसा प्राप्त करने वाला / Paid To *</label>
+                <label className="form-label">{paidToLabel}</label>
                 <AutocompleteInput
                   value={form.paidTo}
                   onChange={(val) => setForm({ ...form, paidTo: val })}
-                  placeholder="जैसे: शर्मा टेंट हाउस"
+                  placeholder={paidToPlaceholder}
                   onAddNew={() => setAddPersonFor('paidTo')}
                 />
                 {errors.paidTo && <div className="form-error">{errors.paidTo}</div>}
@@ -248,11 +278,11 @@ export default function AddExpenseModal({ isOpen, onClose, eventId, editData, on
             <div className="grid-2">
               {/* Purpose */}
               <div className="form-group">
-                <label className="form-label">उद्देश्य / Purpose</label>
+                <label className="form-label">{isDukandar ? 'सामान का संक्षिप्त विवरण / Items Summary' : isContribution ? 'खर्च का उद्देश्य / Purpose' : 'उद्देश्य / Purpose'}</label>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="जैसे: Stage Decoration"
+                  placeholder={isDukandar ? 'जैसे: 2 बोरी चावल, तेल, दाल (सामान)' : 'जैसे: Stage Decoration'}
                   value={form.purpose}
                   onChange={(e) => setForm({ ...form, purpose: e.target.value })}
                   list="expense-purpose-suggestions"
@@ -292,7 +322,7 @@ export default function AddExpenseModal({ isOpen, onClose, eventId, editData, on
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <h4 style={{ fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <ShoppingCart size={16} />
-                  सामान / Items (वैकल्पिक)
+                  {isDukandar ? '📦 दिए गए सामान की सूची (दर व मात्रा)' : 'सामान / Items (वैकल्पिक)'}
                 </h4>
                 <button type="button" className="btn btn-sm btn-primary" onClick={addItem}>
                   <Plus size={14} /> आइटम जोड़ें
@@ -404,7 +434,7 @@ export default function AddExpenseModal({ isOpen, onClose, eventId, editData, on
             </button>
             <button type="submit" className="btn btn-expense" style={{ background: '#ef4444' }}>
               <ShoppingCart size={16} />
-              {editData ? 'अपडेट करें / Update' : 'खर्च जोड़ें / Save Expense'}
+              {editData ? 'अपडेट करें / Update' : isDukandar ? 'सामान/उधारी दर्ज करें / Save Credit' : isContribution ? 'समूह खर्च जोड़ें / Save' : 'खर्च जोड़ें / Save Expense'}
             </button>
           </div>
         </form>

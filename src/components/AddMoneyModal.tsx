@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, IndianRupee } from 'lucide-react';
-import { MoneyReceived, PAYMENT_METHODS, PURPOSE_SUGGESTIONS } from '@/types';
+import { MoneyReceived, PAYMENT_METHODS, PURPOSE_SUGGESTIONS, HisabEventType, getEventTypeConfig } from '@/types';
 import { addMoneyReceived, updateMoneyReceived } from '@/store';
 import { getTodayDate } from '@/utils/helpers';
 import { useToast } from '@/components/Toast';
@@ -13,11 +13,12 @@ interface AddMoneyModalProps {
   isOpen: boolean;
   onClose: () => void;
   eventId: string;
+  eventType?: HisabEventType;
   editData?: MoneyReceived | null;
   onSaved: () => void;
 }
 
-export default function AddMoneyModal({ isOpen, onClose, eventId, editData, onSaved }: AddMoneyModalProps) {
+export default function AddMoneyModal({ isOpen, onClose, eventId, eventType, editData, onSaved }: AddMoneyModalProps) {
   const { showToast } = useToast();
   const [form, setForm] = useState({
     amount: '',
@@ -111,6 +112,35 @@ export default function AddMoneyModal({ isOpen, onClose, eventId, editData, onSa
     setAddPersonFor(null);
   };
 
+  const isDukandar = eventType === 'dukandar_diary';
+  const isContribution = eventType === 'contribution';
+
+  const titleText = editData
+    ? (isDukandar ? '✏️ जमा राशि एडिट करें' : isContribution ? '✏️ अंशदान एडिट करें' : '✏️ पैसा एडिट करें')
+    : (isDukandar ? '💰 ग्राहक से जमा मिला / Received Payment (Jama)' : isContribution ? '💰 अंशदान मिला / Member Contribution' : '💰 पैसा जोड़ें / Add Money');
+
+  const givenByLabel = isDukandar
+    ? 'ग्राहक का नाम (पैसा देने वाला) / Customer Name *'
+    : isContribution
+    ? 'सदस्य का नाम (अंशदान देने वाला) / Member Name *'
+    : 'पैसा देने वाला / Given By *';
+
+  const givenByPlaceholder = isDukandar ? 'जैसे: रमेश कुमार (ग्राहक)' : isContribution ? 'जैसे: सुरेश कुमार (सदस्य)' : 'जैसे: सुरेश कुमार';
+
+  const depositedWithLabel = isDukandar
+    ? 'दुकानदार / प्राप्तकर्ता / Received By *'
+    : isContribution
+    ? 'कोषाध्यक्ष / प्राप्तकर्ता / Received By *'
+    : 'पैसा जमा करने वाला / Deposited With *';
+
+  const depositedWithPlaceholder = isDukandar ? 'जैसे: दुकानदार / कैशियर' : isContribution ? 'जैसे: कोषाध्यक्ष' : 'जैसे: राजेश कुमार';
+
+  const purposePlaceholder = isDukandar
+    ? 'जैसे: पुरानी उधारी चुकाई, एडवांस जमा'
+    : isContribution
+    ? 'जैसे: मासिक अंशदान, विशेष सहयोग'
+    : 'जैसे: Event Fund';
+
   if (!isOpen) return null;
 
   return (
@@ -118,7 +148,7 @@ export default function AddMoneyModal({ isOpen, onClose, eventId, editData, onSa
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2 style={{ fontSize: 18, fontWeight: 600 }}>
-            {editData ? '✏️ पैसा एडिट करें' : '💰 पैसा जोड़ें / Add Money'}
+            {titleText}
           </h2>
           <button className="btn btn-icon btn-ghost" onClick={onClose}>
             <X size={20} />
@@ -129,7 +159,9 @@ export default function AddMoneyModal({ isOpen, onClose, eventId, editData, onSa
           <div className="modal-body">
             {/* Amount */}
             <div className="form-group">
-              <label className="form-label">राशि / Amount *</label>
+              <label className="form-label">
+                {isDukandar ? 'जमा राशि / Payment Amount (Jama) *' : isContribution ? 'अंशदान राशि / Contribution Amount *' : 'राशि / Amount *'}
+              </label>
               <div style={{ position: 'relative' }}>
                 <span className="currency-symbol">₹</span>
                 <input
@@ -147,11 +179,11 @@ export default function AddMoneyModal({ isOpen, onClose, eventId, editData, onSa
 
             {/* Given By */}
             <div className="form-group">
-              <label className="form-label">पैसा देने वाला / Given By *</label>
+              <label className="form-label">{givenByLabel}</label>
               <AutocompleteInput
                 value={form.givenBy}
                 onChange={(val) => setForm({ ...form, givenBy: val })}
-                placeholder="जैसे: सुरेश कुमार"
+                placeholder={givenByPlaceholder}
                 onAddNew={() => setAddPersonFor('givenBy')}
               />
               {errors.givenBy && <div className="form-error">{errors.givenBy}</div>}
@@ -159,11 +191,11 @@ export default function AddMoneyModal({ isOpen, onClose, eventId, editData, onSa
 
             {/* Deposited With */}
             <div className="form-group">
-              <label className="form-label">पैसा जमा करने वाला / Deposited With *</label>
+              <label className="form-label">{depositedWithLabel}</label>
               <AutocompleteInput
                 value={form.depositedWith}
                 onChange={(val) => setForm({ ...form, depositedWith: val })}
-                placeholder="जैसे: राजेश कुमार"
+                placeholder={depositedWithPlaceholder}
                 onAddNew={() => setAddPersonFor('depositedWith')}
               />
               {errors.depositedWith && <div className="form-error">{errors.depositedWith}</div>}
@@ -201,11 +233,11 @@ export default function AddMoneyModal({ isOpen, onClose, eventId, editData, onSa
 
             {/* Purpose */}
             <div className="form-group">
-              <label className="form-label">उद्देश्य / Purpose</label>
+              <label className="form-label">{isDukandar ? 'उद्देश्य / विवरण (Purpose)' : isContribution ? 'अंशदान विवरण (Purpose)' : 'उद्देश्य / Purpose'}</label>
               <input
                 type="text"
                 className="form-input"
-                placeholder="जैसे: Event Fund"
+                placeholder={purposePlaceholder}
                 value={form.purpose}
                 onChange={(e) => setForm({ ...form, purpose: e.target.value })}
                 list="purpose-suggestions"
@@ -236,7 +268,7 @@ export default function AddMoneyModal({ isOpen, onClose, eventId, editData, onSa
             </button>
             <button type="submit" className="btn btn-income">
               <IndianRupee size={16} />
-              {editData ? 'अपडेट करें / Update' : 'जोड़ें / Save'}
+              {editData ? 'अपडेट करें / Update' : isDukandar ? 'जमा राशि जोड़ें / Save Payment' : isContribution ? 'अंशदान जोड़ें / Save' : 'जोड़ें / Save'}
             </button>
           </div>
         </form>

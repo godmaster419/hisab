@@ -4,8 +4,9 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AppLayout from '@/components/AppLayout';
 import { useToast } from '@/components/Toast';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Check } from 'lucide-react';
 import { getEvent, updateEvent } from '@/store';
+import { HisabEventType, EVENT_TYPES, getEventTypeConfig } from '@/types';
 
 function EditEventContent() {
   const searchParams = useSearchParams();
@@ -13,9 +14,17 @@ function EditEventContent() {
   const router = useRouter();
   const { showToast } = useToast();
   const [form, setForm] = useState({
-    name: '', startDate: '', endDate: '', description: '', responsiblePerson: '', openingBalance: '',
+    name: '',
+    eventType: 'len_den' as HisabEventType,
+    startDate: '',
+    endDate: '',
+    description: '',
+    responsiblePerson: '',
+    openingBalance: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const selectedTypeConfig = getEventTypeConfig(form.eventType);
 
   useEffect(() => {
     if (!id) {
@@ -26,6 +35,7 @@ function EditEventContent() {
     if (!event) { router.push('/events'); return; }
     setForm({
       name: event.name,
+      eventType: event.eventType || 'len_den',
       startDate: event.startDate,
       endDate: event.endDate || '',
       description: event.description || '',
@@ -36,7 +46,7 @@ function EditEventContent() {
 
   const validate = () => {
     const errs: Record<string, string> = {};
-    if (!form.name.trim()) errs.name = 'कृपया Event का नाम दर्ज करें';
+    if (!form.name.trim()) errs.name = 'कृपया नाम दर्ज करें';
     if (!form.startDate) errs.startDate = 'कृपया तारीख चुनें';
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -47,6 +57,7 @@ function EditEventContent() {
     if (!validate()) return;
     updateEvent(id, {
       name: form.name.trim(),
+      eventType: form.eventType,
       startDate: form.startDate,
       endDate: form.endDate,
       description: form.description.trim(),
@@ -59,17 +70,82 @@ function EditEventContent() {
 
   return (
     <AppLayout>
-      <div className="page-container" style={{ maxWidth: 700, margin: '0 auto' }}>
+      <div className="page-container" style={{ maxWidth: 720, margin: '0 auto' }}>
         <div className="page-header">
           <button className="btn btn-ghost btn-sm" onClick={() => router.back()} style={{ marginBottom: 12 }}>
             <ArrowLeft size={16} /> वापस जाएँ
           </button>
-          <h1 className="page-title">✏️ Event एडिट करें</h1>
+          <h1 className="page-title">✏️ Event / खाता एडिट करें</h1>
+          <p className="page-subtitle">Event का प्रकार और विवरण अपडेट करें</p>
         </div>
         <div className="card" style={{ padding: 28 }}>
           <form onSubmit={handleSubmit}>
+            {/* Event Type Selector */}
+            <div className="form-group" style={{ marginBottom: 20 }}>
+              <label className="form-label" style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
+                Event का प्रकार (Event Type):
+              </label>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: 10,
+                }}
+              >
+                {EVENT_TYPES.map((typeOption) => {
+                  const isSelected = form.eventType === typeOption.value;
+                  return (
+                    <div
+                      key={typeOption.value}
+                      onClick={() => setForm({ ...form, eventType: typeOption.value })}
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: 10,
+                        border: `2px solid ${isSelected ? typeOption.badgeColor : 'var(--border-color)'}`,
+                        background: isSelected ? typeOption.badgeBg : 'var(--bg-primary)',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{ fontSize: 20 }}>{typeOption.icon}</span>
+                        {isSelected && (
+                          <div
+                            style={{
+                              width: 18,
+                              height: 18,
+                              borderRadius: '50%',
+                              background: typeOption.badgeColor,
+                              color: 'white',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <Check size={11} />
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: isSelected ? typeOption.badgeColor : 'var(--text-primary)' }}>
+                        {typeOption.shortHi}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
+                        {typeOption.descHi}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="form-group">
-              <label className="form-label">Event का नाम *</label>
+              <label className="form-label">
+                {form.eventType === 'dukandar_diary'
+                  ? 'दुकान / खाते का नाम *'
+                  : form.eventType === 'contribution'
+                  ? 'समिति / फंड का नाम *'
+                  : 'Event का नाम *'}
+              </label>
               <input type="text" className="form-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               {errors.name && <div className="form-error">{errors.name}</div>}
             </div>
@@ -90,11 +166,17 @@ function EditEventContent() {
             </div>
             <div className="grid-2">
               <div className="form-group">
-                <label className="form-label">जिम्मेदार व्यक्ति</label>
+                <label className="form-label">{selectedTypeConfig.personRole}</label>
                 <input type="text" className="form-input" value={form.responsiblePerson} onChange={(e) => setForm({ ...form, responsiblePerson: e.target.value })} />
               </div>
               <div className="form-group">
-                <label className="form-label">शुरुआती राशि (₹)</label>
+                <label className="form-label">
+                  {form.eventType === 'dukandar_diary'
+                    ? 'प्रारंभिक उधारी / पुराना बकाया (₹)'
+                    : form.eventType === 'contribution'
+                    ? 'शुरुआती फंड राशि (₹)'
+                    : 'शुरुआती राशि (₹)'}
+                </label>
                 <div style={{ position: 'relative' }}>
                   <span className="currency-symbol">₹</span>
                   <input type="number" className="form-input form-input-currency" value={form.openingBalance} onChange={(e) => setForm({ ...form, openingBalance: e.target.value })} min="0" step="any" />

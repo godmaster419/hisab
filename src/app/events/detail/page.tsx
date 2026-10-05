@@ -19,7 +19,7 @@ import {
   deleteMoneyReceived, deleteExpense, deleteEvent,
 } from '@/store';
 import { formatCurrency, formatDate, CATEGORY_LABELS, PAYMENT_LABELS, getCategoryColor } from '@/utils/helpers';
-import { HisabEvent, MoneyReceived, Expense, ExpenseCategory } from '@/types';
+import { HisabEvent, MoneyReceived, Expense, ExpenseCategory, getEventTypeConfig } from '@/types';
 import { downloadEventPDF, printEventPDF } from '@/utils/pdf';
 import { exportMoneyReceivedCSV, exportExpensesCSV, exportEventExcel } from '@/utils/export';
 import {
@@ -115,6 +115,10 @@ function EventDetailContent() {
     value: c.amount,
   }));
 
+  const typeConfig = getEventTypeConfig(event.eventType);
+  const isDukandar = event.eventType === 'dukandar_diary';
+  const isContribution = event.eventType === 'contribution';
+
   return (
     <AppLayout>
       <div className="page-container">
@@ -126,6 +130,24 @@ function EventDetailContent() {
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
               <h1 className="page-title" style={{ margin: 0 }}>{event.name}</h1>
+              {/* Event Type Badge */}
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  padding: '3px 10px',
+                  borderRadius: 8,
+                  background: typeConfig.badgeBg,
+                  color: typeConfig.badgeColor,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  border: `1px solid ${typeConfig.badgeColor}33`,
+                }}
+              >
+                <span>{typeConfig.icon}</span>
+                <span>{typeConfig.shortHi}</span>
+              </span>
               {event.isDemo && (
                 <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 12, background: 'rgba(245, 158, 11, 0.15)', color: '#d97706', fontWeight: 600 }}>
                   Demo Event
@@ -139,11 +161,11 @@ function EventDetailContent() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button className="btn btn-income btn-sm" onClick={() => setShowAddMoney(true)}>
-              <IndianRupee size={15} /> पैसा जोड़ें
+            <button className="btn btn-income btn-sm" onClick={() => { setEditMoney(null); setShowAddMoney(true); }}>
+              <IndianRupee size={15} /> {isDukandar ? '+ जमा मिला (Payment)' : isContribution ? '+ अंशदान मिला' : '+ पैसा जोड़ें'}
             </button>
-            <button className="btn btn-expense btn-sm" onClick={() => setShowAddExpense(true)}>
-              <ShoppingCart size={15} /> खर्च जोड़ें
+            <button className="btn btn-expense btn-sm" onClick={() => { setEditExpense(null); setShowAddExpense(true); }}>
+              <ShoppingCart size={15} /> {isDukandar ? '+ सामान दिया (उधारी)' : isContribution ? '+ समूह खर्च' : '+ खर्च जोड़ें'}
             </button>
             <button className="btn btn-secondary btn-sm" onClick={handleDownloadPDF}>
               <Download size={15} /> PDF डाउनलोड करें
@@ -179,21 +201,21 @@ function EventDetailContent() {
           )}
           <div className="card summary-card income">
             <p style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 500, marginBottom: 4 }}>
-              कुल आय / Total Received
+              {isDukandar ? 'कुल जमा राशि मिली / Total Jama' : isContribution ? 'कुल अंशदान मिला / Total Contribution' : 'कुल आय / Total Received'}
             </p>
             <p style={{ fontSize: 24, fontWeight: 700, color: 'var(--income-color)' }}>{formatCurrency(summary.totalReceived)}</p>
             <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>{summary.incomeCount} entries</p>
           </div>
           <div className="card summary-card expense">
             <p style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 500, marginBottom: 4 }}>
-              कुल खर्च / Total Spent
+              {isDukandar ? 'कुल सामान दिया / Goods Given (उधारी)' : isContribution ? 'कुल समूह खर्च / Total Expenses' : 'कुल खर्च / Total Spent'}
             </p>
             <p style={{ fontSize: 24, fontWeight: 700, color: 'var(--expense-color)' }}>{formatCurrency(summary.totalSpent)}</p>
             <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>{summary.expenseCount} entries</p>
           </div>
           <div className="card summary-card balance">
             <p style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 500, marginBottom: 4 }}>
-              शेष राशि / Balance
+              {isDukandar ? 'नेट खाता बाकी / Net Balance' : isContribution ? 'बचा हुआ फंड / Fund Balance' : 'शेष राशि / Balance'}
             </p>
             <p style={{
               fontSize: 24, fontWeight: 700,
@@ -208,19 +230,30 @@ function EventDetailContent() {
         {summary.balance < 0 && (
           <div className="warning-banner" style={{ marginBottom: 20 }}>
             <AlertTriangle size={18} />
-            ध्यान दें: खर्च उपलब्ध राशि से अधिक है! / Warning: Expenses exceed available balance!
+            {isDukandar
+              ? 'ध्यान दें: कुल ग्राहक उधारी (सामान) प्राप्त जमा से अधिक है! / Total goods given on credit exceeds total payments received!'
+              : 'ध्यान दें: खर्च उपलब्ध राशि से अधिक है! / Warning: Expenses exceed available balance!'}
           </div>
         )}
 
         {/* Tabs */}
         <div className="tabs" style={{ marginBottom: 24 }}>
           {[
-            { key: 'overview', label: '📊 सारांश', labelEn: 'Overview' },
-            { key: 'income', label: '💰 आय', labelEn: 'Income' },
-            { key: 'expenses', label: '🧾 खर्च', labelEn: 'Expenses' },
-            { key: 'history', label: '🔄 इतिहास', labelEn: 'History' },
-            { key: 'people', label: '👥 लोग', labelEn: 'People' },
-            { key: 'categories', label: '📈 श्रेणी', labelEn: 'Categories' },
+            { key: 'overview', label: '📊 सारांश' },
+            {
+              key: 'income',
+              label: isDukandar ? '💰 जमा मिला (Payment)' : isContribution ? '💰 अंशदान (Contribution)' : '💰 आय (Income)',
+            },
+            {
+              key: 'expenses',
+              label: isDukandar ? '🛒 सामान दिया (उधारी)' : isContribution ? '🧾 समूह खर्च' : '🧾 खर्च (Expenses)',
+            },
+            { key: 'history', label: '🔄 इतिहास' },
+            {
+              key: 'people',
+              label: isDukandar ? '👥 ग्राहक खाता बही (Customers)' : isContribution ? '👥 सदस्य सूची (Members)' : '👥 लोग (People)',
+            },
+            { key: 'categories', label: '📈 श्रेणी' },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -335,9 +368,11 @@ function EventDetailContent() {
         {activeTab === 'income' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600 }}>💰 पैसा प्राप्त / Money Received</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 600 }}>
+                {isDukandar ? '💰 ग्राहक से जमा मिली राशि / Customer Payments (Jama)' : isContribution ? '💰 सदस्य अंशदान / Member Contributions' : '💰 पैसा प्राप्त / Money Received'}
+              </h3>
               <button className="btn btn-income btn-sm" onClick={() => { setEditMoney(null); setShowAddMoney(true); }}>
-                <Plus size={15} /> पैसा जोड़ें
+                <Plus size={15} /> {isDukandar ? 'जमा जोड़ें' : isContribution ? 'अंशदान जोड़ें' : 'पैसा जोड़ें'}
               </button>
             </div>
 
@@ -345,10 +380,14 @@ function EventDetailContent() {
               <div className="card">
                 <div className="empty-state">
                   <div className="empty-state-icon"><IndianRupee size={32} /></div>
-                  <h3 className="empty-state-title">अभी कोई पैसा दर्ज नहीं किया गया है</h3>
-                  <p className="empty-state-text">पैसे का रिकॉर्ड जोड़ने के लिए ऊपर बटन दबाएँ</p>
+                  <h3 className="empty-state-title">
+                    {isDukandar ? 'अभी कोई जमा राशि दर्ज नहीं की गई है' : isContribution ? 'अभी कोई अंशदान दर्ज नहीं किया गया है' : 'अभी कोई पैसा दर्ज नहीं किया गया है'}
+                  </h3>
+                  <p className="empty-state-text">
+                    {isDukandar ? 'ग्राहक द्वारा दी गई जमा राशि जोड़ने के लिए बटन दबाएँ' : isContribution ? 'सदस्यों का अंशदान जोड़ने के लिए ऊपर बटन दबाएँ' : 'पैसे का रिकॉर्ड जोड़ने के लिए ऊपर बटन दबाएँ'}
+                  </p>
                   <button className="btn btn-income" onClick={() => setShowAddMoney(true)}>
-                    <Plus size={16} /> पैसा जोड़ें
+                    <Plus size={16} /> {isDukandar ? 'जमा जोड़ें' : isContribution ? 'अंशदान जोड़ें' : 'पैसा जोड़ें'}
                   </button>
                 </div>
               </div>
@@ -360,10 +399,10 @@ function EventDetailContent() {
                     <thead>
                       <tr>
                         <th>तारीख / Date</th>
-                        <th>देने वाला / Given By</th>
-                        <th>राशि / Amount</th>
-                        <th>जमा करने वाला / Deposited With</th>
-                        <th>उद्देश्य / Purpose</th>
+                        <th>{isDukandar ? 'ग्राहक का नाम / Customer' : isContribution ? 'सदस्य का नाम / Member' : 'देने वाला / Given By'}</th>
+                        <th>{isDukandar ? 'जमा राशि / Amount' : 'राशि / Amount'}</th>
+                        <th>{isDukandar ? 'दुकानदार / Received By' : isContribution ? 'कोषाध्यक्ष / Received By' : 'जमा करने वाला / Deposited With'}</th>
+                        <th>{isDukandar ? 'विवरण / Purpose' : 'उद्देश्य / Purpose'}</th>
                         <th>Mode</th>
                         <th style={{ width: 80 }}>Actions</th>
                       </tr>
@@ -430,9 +469,11 @@ function EventDetailContent() {
         {activeTab === 'expenses' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600 }}>🧾 खर्च / Expenses</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 600 }}>
+                {isDukandar ? '🛒 ग्राहक को सामान दिया / Goods Given (Udhar)' : isContribution ? '🧾 समूह खर्च / Group Expenses' : '🧾 खर्च / Expenses'}
+              </h3>
               <button className="btn btn-expense btn-sm" onClick={() => { setEditExpense(null); setShowAddExpense(true); }}>
-                <Plus size={15} /> खर्च जोड़ें
+                <Plus size={15} /> {isDukandar ? 'सामान/उधारी जोड़ें' : isContribution ? 'खर्च जोड़ें' : 'खर्च जोड़ें'}
               </button>
             </div>
 
@@ -440,10 +481,14 @@ function EventDetailContent() {
               <div className="card">
                 <div className="empty-state">
                   <div className="empty-state-icon"><ShoppingCart size={32} /></div>
-                  <h3 className="empty-state-title">अभी कोई खर्च दर्ज नहीं किया गया है</h3>
-                  <p className="empty-state-text">खर्च का रिकॉर्ड जोड़ने के लिए ऊपर बटन दबाएँ</p>
+                  <h3 className="empty-state-title">
+                    {isDukandar ? 'अभी कोई सामान या उधारी दर्ज नहीं है' : isContribution ? 'अभी कोई खर्च दर्ज नहीं है' : 'अभी कोई खर्च दर्ज नहीं किया गया है'}
+                  </h3>
+                  <p className="empty-state-text">
+                    {isDukandar ? 'ग्राहक को दिए गए सामान का विवरण जोड़ने के लिए ऊपर बटन दबाएँ' : 'खर्च का रिकॉर्ड जोड़ने के लिए ऊपर बटन दबाएँ'}
+                  </p>
                   <button className="btn btn-expense" onClick={() => setShowAddExpense(true)}>
-                    <Plus size={16} /> खर्च जोड़ें
+                    <Plus size={16} /> {isDukandar ? 'सामान/उधारी जोड़ें' : 'खर्च जोड़ें'}
                   </button>
                 </div>
               </div>
@@ -455,11 +500,11 @@ function EventDetailContent() {
                     <thead>
                       <tr>
                         <th>तारीख / Date</th>
-                        <th>खर्च करने वाला / Spent By</th>
-                        <th>प्राप्तकर्ता / Paid To</th>
-                        <th>राशि / Amount</th>
+                        <th>{isDukandar ? 'दुकानदार / Given By' : 'खर्च करने वाला / Spent By'}</th>
+                        <th>{isDukandar ? 'ग्राहक (खाताधारक) / Customer' : 'प्राप्तकर्ता / Paid To'}</th>
+                        <th>{isDukandar ? 'सामान कीमत / Amount' : 'राशि / Amount'}</th>
                         <th>श्रेणी / Category</th>
-                        <th>उद्देश्य / Purpose</th>
+                        <th>{isDukandar ? 'सामान विवरण / Items' : 'उद्देश्य / Purpose'}</th>
                         <th style={{ width: 80 }}>Actions</th>
                       </tr>
                     </thead>
@@ -579,49 +624,94 @@ function EventDetailContent() {
         {/* === PEOPLE === */}
         {activeTab === 'people' && (
           <div>
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>👥 लोग / People</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>
+              {isDukandar ? '👥 ग्राहक खाता बही (Customers Khata Ledger)' : isContribution ? '👥 सदस्य अंशदान सूची (Members)' : '👥 लोग / People'}
+            </h3>
             {people.length === 0 ? (
               <div className="card">
                 <div className="empty-state">
                   <div className="empty-state-icon"><Users size={32} /></div>
-                  <h3 className="empty-state-title">कोई व्यक्ति नहीं है</h3>
-                  <p className="empty-state-text">लेनदेन जोड़ने पर लोगों की जानकारी यहाँ दिखेगी</p>
+                  <h3 className="empty-state-title">
+                    {isDukandar ? 'कोई ग्राहक खाता नहीं है' : isContribution ? 'कोई सदस्य नहीं है' : 'कोई व्यक्ति नहीं है'}
+                  </h3>
+                  <p className="empty-state-text">
+                    {isDukandar ? 'सामान देने या जमा राशि दर्ज करने पर ग्राहकों का हिसाब यहाँ दिखेगा' : 'लेनदेन जोड़ने पर लोगों की जानकारी यहाँ दिखेगी'}
+                  </p>
                 </div>
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
-                {people.map((p) => (
-                  <div key={p.name} className="card" style={{ padding: 20 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                      <div style={{
-                        width: 44, height: 44, borderRadius: '50%',
-                        background: 'var(--brand-primary-light)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: 'var(--brand-primary)', fontWeight: 700, fontSize: 18,
-                      }}>
-                        {p.name.charAt(0).toUpperCase()}
+                {people.map((p) => {
+                  const netBalance = p.moneyGiven - p.moneySpent;
+                  return (
+                    <div key={p.name} className="card" style={{ padding: 20 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                        <div style={{
+                          width: 44, height: 44, borderRadius: '50%',
+                          background: 'var(--brand-primary-light)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: 'var(--brand-primary)', fontWeight: 700, fontSize: 18,
+                        }}>
+                          {p.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <h4 style={{ fontSize: 15, fontWeight: 600 }}>{p.name}</h4>
+                          <p style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+                            {p.transactionCount} {isDukandar ? 'प्रविष्टियाँ' : 'transactions'}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 style={{ fontSize: 15, fontWeight: 600 }}>{p.name}</h4>
-                        <p style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{p.transactionCount} transactions</p>
-                      </div>
+
+                      {isDukandar ? (
+                        <div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
+                            <div style={{ textAlign: 'center', padding: 8, background: 'var(--income-bg)', borderRadius: 8 }}>
+                              <p style={{ fontSize: 10, color: 'var(--income-color)', fontWeight: 500 }}>जमा किया (Jama)</p>
+                              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--income-color)' }}>{formatCurrency(p.moneyGiven)}</p>
+                            </div>
+                            <div style={{ textAlign: 'center', padding: 8, background: 'var(--expense-bg)', borderRadius: 8 }}>
+                              <p style={{ fontSize: 10, color: 'var(--expense-color)', fontWeight: 500 }}>सामान लिया (Udhar)</p>
+                              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--expense-color)' }}>{formatCurrency(p.moneySpent)}</p>
+                            </div>
+                          </div>
+                          <div style={{
+                            padding: '8px 12px',
+                            borderRadius: 8,
+                            textAlign: 'center',
+                            background: netBalance >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                            border: `1px solid ${netBalance >= 0 ? '#10b981' : '#ef4444'}33`,
+                          }}>
+                            <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                              {netBalance < 0 ? 'उधारी बाकी (देना है): ' : netBalance > 0 ? 'एडवांस जमा: ' : 'खाता हिसाब: '}
+                            </span>
+                            <span style={{
+                              fontWeight: 700,
+                              fontSize: 13,
+                              color: netBalance >= 0 ? '#10b981' : '#ef4444',
+                            }}>
+                              {netBalance === 0 ? 'चुकता (Nil)' : formatCurrency(Math.abs(netBalance))}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                          <div style={{ textAlign: 'center', padding: 8, background: 'var(--income-bg)', borderRadius: 8 }}>
+                            <p style={{ fontSize: 10, color: 'var(--income-color)', fontWeight: 500 }}>{isContribution ? 'अंशदान दिया' : 'दिया / Given'}</p>
+                            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--income-color)' }}>{formatCurrency(p.moneyGiven)}</p>
+                          </div>
+                          <div style={{ textAlign: 'center', padding: 8, background: 'var(--brand-primary-light)', borderRadius: 8 }}>
+                            <p style={{ fontSize: 10, color: 'var(--brand-primary)', fontWeight: 500 }}>मिला / Got</p>
+                            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand-primary)' }}>{formatCurrency(p.moneyReceived)}</p>
+                          </div>
+                          <div style={{ textAlign: 'center', padding: 8, background: 'var(--expense-bg)', borderRadius: 8 }}>
+                            <p style={{ fontSize: 10, color: 'var(--expense-color)', fontWeight: 500 }}>खर्च / Spent</p>
+                            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--expense-color)' }}>{formatCurrency(p.moneySpent)}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                      <div style={{ textAlign: 'center', padding: 8, background: 'var(--income-bg)', borderRadius: 8 }}>
-                        <p style={{ fontSize: 10, color: 'var(--income-color)', fontWeight: 500 }}>दिया / Given</p>
-                        <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--income-color)' }}>{formatCurrency(p.moneyGiven)}</p>
-                      </div>
-                      <div style={{ textAlign: 'center', padding: 8, background: 'var(--brand-primary-light)', borderRadius: 8 }}>
-                        <p style={{ fontSize: 10, color: 'var(--brand-primary)', fontWeight: 500 }}>मिला / Got</p>
-                        <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand-primary)' }}>{formatCurrency(p.moneyReceived)}</p>
-                      </div>
-                      <div style={{ textAlign: 'center', padding: 8, background: 'var(--expense-bg)', borderRadius: 8 }}>
-                        <p style={{ fontSize: 10, color: 'var(--expense-color)', fontWeight: 500 }}>खर्च / Spent</p>
-                        <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--expense-color)' }}>{formatCurrency(p.moneySpent)}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -684,6 +774,7 @@ function EventDetailContent() {
           isOpen={showAddMoney}
           onClose={() => { setShowAddMoney(false); setEditMoney(null); }}
           eventId={id}
+          eventType={event.eventType}
           editData={editMoney}
           onSaved={refreshData}
         />
@@ -692,6 +783,7 @@ function EventDetailContent() {
           isOpen={showAddExpense}
           onClose={() => { setShowAddExpense(false); setEditExpense(null); }}
           eventId={id}
+          eventType={event.eventType}
           editData={editExpense}
           onSaved={refreshData}
         />

@@ -2,9 +2,76 @@
 // HISAB - Type Definitions
 // ============================================
 
+export type HisabEventType = 'contribution' | 'len_den' | 'dukandar_diary';
+
+export interface EventTypeConfig {
+  value: HisabEventType;
+  label: string;
+  labelHi: string;
+  shortHi: string;
+  descHi: string;
+  icon: string;
+  badgeBg: string;
+  badgeColor: string;
+  incomeLabel: string;
+  expenseLabel: string;
+  balanceLabel: string;
+  personRole: string;
+}
+
+export const EVENT_TYPES: EventTypeConfig[] = [
+  {
+    value: 'contribution',
+    label: 'Contribution',
+    labelHi: 'कंट्रीब्यूशन / मासिक अंशदान',
+    shortHi: 'कंट्रीब्यूशन',
+    descHi: 'समिति, चंदा, मासिक कंट्रीब्यूशन या ग्रुप फंड हिसाब',
+    icon: '💰',
+    badgeBg: 'rgba(99, 102, 241, 0.12)',
+    badgeColor: '#6366f1',
+    incomeLabel: 'अंशदान प्राप्त (Contribution Received)',
+    expenseLabel: 'समूह खर्च (Group Expense)',
+    balanceLabel: 'बचा हुआ फंड (Fund Balance)',
+    personRole: 'कोषाध्यक्ष / जिम्मेदार सदस्य (Treasurer / Member)',
+  },
+  {
+    value: 'len_den',
+    label: 'Len-Den',
+    labelHi: 'लेन-देन / सामान्य आय-व्यय',
+    shortHi: 'लेन-देन',
+    descHi: 'आयोजन, शादी-पार्टी, टूर या सामान्य आय-व्यय',
+    icon: '🔄',
+    badgeBg: 'rgba(59, 130, 246, 0.12)',
+    badgeColor: '#3b82f6',
+    incomeLabel: 'रुपये आए / आय (Money In)',
+    expenseLabel: 'रुपये गए / खर्च (Money Out)',
+    balanceLabel: 'शेष बचत (Balance)',
+    personRole: 'जिम्मेदार व्यक्ति (Person Responsible)',
+  },
+  {
+    value: 'dukandar_diary',
+    label: 'Dukandar Diary',
+    labelHi: 'दुकानदार डायरी (ग्राहक सामान लेन-देन)',
+    shortHi: 'दुकानदार डायरी',
+    descHi: 'ग्राहक को सामान देना, उधारी और जमा का हिसाब-किताब',
+    icon: '📖',
+    badgeBg: 'rgba(16, 185, 129, 0.12)',
+    badgeColor: '#059669',
+    incomeLabel: 'जमा राशि मिली (Jama / Payment)',
+    expenseLabel: 'सामान दिया / उधारी (Saman Diya / Udhar)',
+    balanceLabel: 'बाकी हिसाब / बैलेंस (Net Balance)',
+    personRole: 'दुकानदार / संचालक का नाम (Shop Owner / Vendor)',
+  },
+];
+
+export function getEventTypeConfig(type?: HisabEventType): EventTypeConfig {
+  return EVENT_TYPES.find((t) => t.value === type) || EVENT_TYPES[1];
+}
+
 export interface HisabEvent {
   id: string;
   name: string;
+  eventType?: HisabEventType;
   startDate: string;
   endDate: string;
   description: string;
@@ -133,6 +200,40 @@ export interface PersonSummary {
   transactionCount: number;
 }
 
+export type MonthlyEntryType = 'contribution' | 'expense';
+export type MonthlyContributionStatus = 'paid' | 'unpaid';
+
+export interface MonthlyEntry {
+  id: string;
+  type: MonthlyEntryType;
+  memberName: string;
+  title: string;
+  status: MonthlyContributionStatus;
+  amount: number;
+  collectedBy: string;
+  spentBy: string;
+  location: string;
+  date: string;
+  note?: string;
+  isDemo?: boolean;
+  createdAt: string;
+}
+
+export interface MonthlySummary {
+  selectedMonth: string;
+  previousRemainingBalance: number;
+  previousMonthStr: string;
+  previousMonthLabel: string;
+  totalCollected: number;
+  totalUnpaid: number;
+  totalSpent: number;
+  totalAvailable: number;
+  netBalance: number;
+  paidCount: number;
+  unpaidCount: number;
+  expenseCount: number;
+}
+
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
   language: 'hi' | 'en' | 'both';
@@ -140,6 +241,8 @@ export interface AppSettings {
   currencySymbol: string;
   demoDataLoaded?: boolean;
   demoDataDeleted?: boolean;
+  dashboardViewMode?: 'both' | 'events' | 'contributions';
+  includePreviousMonthBalance?: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -149,6 +252,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   currencySymbol: '₹',
   demoDataLoaded: false,
   demoDataDeleted: false,
+  dashboardViewMode: 'both',
+  includePreviousMonthBalance: true,
 };
 
 export const PAYMENT_METHODS: { value: PaymentMethod; label: string; labelHi: string }[] = [

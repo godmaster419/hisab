@@ -174,3 +174,71 @@ export const PAYMENT_LABELS: Record<string, { en: string; hi: string }> = {
   bank_transfer: { en: 'Bank Transfer', hi: 'बैंक ट्रांसफर' },
   other: { en: 'Other', hi: 'अन्य' },
 };
+
+/**
+ * Format YYYY-MM to readable Hindi & English month name
+ */
+export function formatMonthYear(yyyyMm: string): string {
+  if (!yyyyMm || yyyyMm === 'all') return 'सभी महीने / All Months';
+  const [yearStr, monthStr] = yyyyMm.split('-');
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  if (isNaN(year) || isNaN(month)) return yyyyMm;
+  const date = new Date(year, month - 1, 1);
+  const hiMonth = date.toLocaleDateString('hi-IN', { month: 'long', year: 'numeric' });
+  const enMonth = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  return `${hiMonth} (${enMonth})`;
+}
+
+/**
+ * Get Hindi month title (e.g. "अक्टूबर 2026")
+ */
+export function formatHindiMonth(yyyyMm: string): string {
+  if (!yyyyMm || yyyyMm === 'all') return 'सभी महीने';
+  const [yearStr, monthStr] = yyyyMm.split('-');
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  if (isNaN(year) || isNaN(month)) return yyyyMm;
+  const date = new Date(year, month - 1, 1);
+  return date.toLocaleDateString('hi-IN', { month: 'long', year: 'numeric' });
+}
+
+/**
+ * Get previous month string in YYYY-MM format
+ */
+export function getPreviousMonthStr(yyyyMm: string): string {
+  if (!yyyyMm || yyyyMm === 'all') return '2026-09';
+  const [yearStr, monthStr] = yyyyMm.split('-');
+  let year = parseInt(yearStr, 10);
+  let month = parseInt(monthStr, 10);
+  month -= 1;
+  if (month < 1) {
+    month = 12;
+    year -= 1;
+  }
+  return `${year}-${String(month).padStart(2, '0')}`;
+}
+
+/**
+ * Get next month string in YYYY-MM format
+ */
+export function getNextMonthStr(yyyyMm: string): string {
+  if (!yyyyMm || yyyyMm === 'all') return '2026-11';
+  const [yearStr, monthStr] = yyyyMm.split('-');
+  let year = parseInt(yearStr, 10);
+  let month = parseInt(monthStr, 10);
+  month += 1;
+  if (month > 12) {
+    month = 1;
+    year += 1;
+  }
+  return `${year}-${String(month).padStart(2, '0')}`;
+}
+
+/**
+ * Get current month string in YYYY-MM format
+ */
+export function getCurrentMonthStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}

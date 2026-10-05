@@ -11,7 +11,7 @@ import {
   getMoneyReceivedByEvent, getExpensesByEvent,
 } from '@/store';
 import { formatCurrency, formatDate, CATEGORY_LABELS, getCategoryColor } from '@/utils/helpers';
-import { HisabEvent } from '@/types';
+import { HisabEvent, getEventTypeConfig } from '@/types';
 import { downloadEventPDF, printEventPDF, downloadHindiTestPDF } from '@/utils/pdf';
 import { exportEventExcel } from '@/utils/export';
 import { useToast } from '@/components/Toast';
@@ -85,10 +85,15 @@ export default function ReportsPage() {
             value={selectedEvent}
             onChange={(e) => setSelectedEvent(e.target.value)}
           >
-            <option value="all">सभी Events / All Events</option>
-            {events.map((ev) => (
-              <option key={ev.id} value={ev.id}>{ev.name}</option>
-            ))}
+            <option value="all">⭐ सभी Events / All Events</option>
+            {events.map((ev) => {
+              const cfg = getEventTypeConfig(ev.eventType);
+              return (
+                <option key={ev.id} value={ev.id}>
+                  {cfg.icon} {ev.name} ({cfg.shortHi})
+                </option>
+              );
+            })}
           </select>
           {selectedEvent !== 'all' && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

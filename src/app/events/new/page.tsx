@@ -4,15 +4,17 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AppLayout from '@/components/AppLayout';
 import { useToast } from '@/components/Toast';
-import { ArrowLeft, Calendar, Save } from 'lucide-react';
+import { ArrowLeft, Calendar, Save, Check } from 'lucide-react';
 import { createEvent } from '@/store';
 import { getTodayDate } from '@/utils/helpers';
+import { HisabEventType, EVENT_TYPES } from '@/types';
 
 export default function NewEventPage() {
   const router = useRouter();
   const { showToast } = useToast();
   const [form, setForm] = useState({
     name: '',
+    eventType: 'len_den' as HisabEventType,
     startDate: getTodayDate(),
     endDate: '',
     description: '',
@@ -21,10 +23,12 @@ export default function NewEventPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const selectedTypeConfig = EVENT_TYPES.find((t) => t.value === form.eventType) || EVENT_TYPES[1];
+
   const validate = () => {
     const errs: Record<string, string> = {};
     if (!form.name.trim()) {
-      errs.name = 'कृपया Event का नाम दर्ज करें';
+      errs.name = 'कृपया नाम दर्ज करें';
     }
     if (!form.startDate) {
       errs.startDate = 'कृपया तारीख चुनें';
@@ -42,6 +46,7 @@ export default function NewEventPage() {
 
     const event = createEvent({
       name: form.name.trim(),
+      eventType: form.eventType,
       startDate: form.startDate,
       endDate: form.endDate,
       description: form.description.trim(),
@@ -55,7 +60,7 @@ export default function NewEventPage() {
 
   return (
     <AppLayout>
-      <div className="page-container" style={{ maxWidth: 700, margin: '0 auto' }}>
+      <div className="page-container" style={{ maxWidth: 720, margin: '0 auto' }}>
         {/* Header */}
         <div className="page-header">
           <button
@@ -65,19 +70,91 @@ export default function NewEventPage() {
           >
             <ArrowLeft size={16} /> वापस जाएँ / Back
           </button>
-          <h1 className="page-title">📅 नया Event बनाएँ</h1>
-          <p className="page-subtitle">Event की जानकारी भरें</p>
+          <h1 className="page-title">📅 नया Event / खाता बनाएँ</h1>
+          <p className="page-subtitle">प्रकार चुनें और आवश्यक जानकारी भरें</p>
         </div>
 
         <div className="card" style={{ padding: 28 }}>
           <form onSubmit={handleSubmit}>
+            {/* 1. Event Type Selector */}
+            <div className="form-group" style={{ marginBottom: 24 }}>
+              <label className="form-label" style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>
+                Event का प्रकार चुनें (Select Event Type) *
+              </label>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: 12,
+                }}
+              >
+                {EVENT_TYPES.map((typeOption) => {
+                  const isSelected = form.eventType === typeOption.value;
+                  return (
+                    <div
+                      key={typeOption.value}
+                      onClick={() => setForm({ ...form, eventType: typeOption.value })}
+                      style={{
+                        padding: '14px 16px',
+                        borderRadius: 12,
+                        border: `2px solid ${isSelected ? typeOption.badgeColor : 'var(--border-color)'}`,
+                        background: isSelected ? typeOption.badgeBg : 'var(--bg-primary)',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        position: 'relative',
+                        boxShadow: isSelected ? 'var(--shadow-sm)' : 'none',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <span style={{ fontSize: 24 }}>{typeOption.icon}</span>
+                        {isSelected && (
+                          <div
+                            style={{
+                              width: 20,
+                              height: 20,
+                              borderRadius: '50%',
+                              background: typeOption.badgeColor,
+                              color: 'white',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <Check size={12} />
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: isSelected ? typeOption.badgeColor : 'var(--text-primary)' }}>
+                        {typeOption.shortHi}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.4 }}>
+                        {typeOption.descHi}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Event Name */}
             <div className="form-group">
-              <label className="form-label">Event का नाम / Event Name *</label>
+              <label className="form-label">
+                {form.eventType === 'dukandar_diary'
+                  ? 'दुकान / खाते का नाम / Shop or Diary Name *'
+                  : form.eventType === 'contribution'
+                  ? 'समिति / फंड का नाम / Committee or Fund Name *'
+                  : 'Event का नाम / Event Name *'}
+              </label>
               <input
                 type="text"
                 className="form-input"
-                placeholder="जैसे: Annual Function 2026"
+                placeholder={
+                  form.eventType === 'dukandar_diary'
+                    ? 'जैसे: रमेश किराना स्टोर - ग्राहक डायरी'
+                    : form.eventType === 'contribution'
+                    ? 'जैसे: समाज सेवा कल्याण समिति 2026'
+                    : 'जैसे: Annual Function 2026'
+                }
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 autoFocus
@@ -125,11 +202,17 @@ export default function NewEventPage() {
             <div className="grid-2">
               {/* Person Responsible */}
               <div className="form-group">
-                <label className="form-label">जिम्मेदार व्यक्ति / Person Responsible</label>
+                <label className="form-label">{selectedTypeConfig.personRole}</label>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="जैसे: Rajesh Kumar"
+                  placeholder={
+                    form.eventType === 'dukandar_diary'
+                      ? 'जैसे: रमेश किराना स्टोर / संचालक'
+                      : form.eventType === 'contribution'
+                      ? 'जैसे: अमित सिंह (कोषाध्यक्ष)'
+                      : 'जैसे: Rajesh Kumar'
+                  }
                   value={form.responsiblePerson}
                   onChange={(e) => setForm({ ...form, responsiblePerson: e.target.value })}
                 />
@@ -137,7 +220,13 @@ export default function NewEventPage() {
 
               {/* Opening Balance */}
               <div className="form-group">
-                <label className="form-label">शुरुआती राशि / Opening Balance</label>
+                <label className="form-label">
+                  {form.eventType === 'dukandar_diary'
+                    ? 'प्रारंभिक उधारी / पुराना बकाया (₹)'
+                    : form.eventType === 'contribution'
+                    ? 'शुरुआती फंड राशि / Opening Fund (₹)'
+                    : 'शुरुआती राशि / Opening Balance (₹)'}
+                </label>
                 <div style={{ position: 'relative' }}>
                   <span className="currency-symbol">₹</span>
                   <input

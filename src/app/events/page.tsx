@@ -11,14 +11,14 @@ import {
 } from 'lucide-react';
 import { getEvents, getEventSummary, deleteEvent, archiveEvent, unarchiveEvent } from '@/store';
 import { formatCurrency, formatDate } from '@/utils/helpers';
-import { HisabEvent } from '@/types';
+import { HisabEvent, HisabEventType, getEventTypeConfig } from '@/types';
 
 export default function EventsPage() {
   const { showToast } = useToast();
   const [mounted, setMounted] = useState(false);
   const [events, setEvents] = useState<HisabEvent[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filter, setFilter] = useState<'all' | 'active' | 'archived'>('all');
+  const [filter, setFilter] = useState<'all' | 'contribution' | 'len_den' | 'dukandar_diary' | 'archived'>('all');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
@@ -32,13 +32,22 @@ export default function EventsPage() {
   };
 
   const filteredEvents = events.filter((e) => {
-    const matchSearch = e.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchSearch =
+      e.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (e.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (e.responsiblePerson || '').toLowerCase().includes(searchQuery.toLowerCase());
 
-    if (filter === 'active') return matchSearch && !e.isArchived;
-    if (filter === 'archived') return matchSearch && e.isArchived;
-    return matchSearch;
+    if (!matchSearch) return false;
+
+    if (filter === 'archived') return e.isArchived;
+    if (e.isArchived) return false;
+
+    if (filter === 'all') return true;
+    if (filter === 'contribution') return e.eventType === 'contribution';
+    if (filter === 'dukandar_diary') return e.eventType === 'dukandar_diary';
+    if (filter === 'len_den') return !e.eventType || e.eventType === 'len_den';
+
+    return true;
   });
 
   const handleDelete = (id: string) => {
@@ -68,8 +77,8 @@ export default function EventsPage() {
         {/* Header */}
         <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h1 className="page-title">📅 इवेंट / Events</h1>
-            <p className="page-subtitle">अपने सभी इवेंट यहाँ देखें और प्रबंधित करें</p>
+            <h1 className="page-title">📅 इवेंट व खाते / Events & Diaries</h1>
+            <p className="page-subtitle">कंट्रीब्यूशन, सामान्य लेन-देन और दुकानदार डायरी का पूरा हिसाब</p>
           </div>
           <Link href="/events/new" className="btn btn-primary">
             <Plus size={18} />
@@ -78,26 +87,32 @@ export default function EventsPage() {
         </div>
 
         {/* Search & Filter */}
-        <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
-          <div className="search-input" style={{ flex: 1, minWidth: 200 }}>
+        <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div className="search-input" style={{ flex: 1, minWidth: 220 }}>
             <Search size={18} />
             <input
               type="text"
               className="form-input"
-              placeholder="Event खोजें... / Search Events..."
+              placeholder="नाम, विवरण खोजें... / Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{ paddingLeft: 40 }}
             />
           </div>
-          <div className="tabs">
-            {(['all', 'active', 'archived'] as const).map((f) => (
+          <div className="tabs" style={{ flexWrap: 'wrap', gap: 4 }}>
+            {[
+              { key: 'all' as const, label: 'सभी / All' },
+              { key: 'contribution' as const, label: '💰 कंट्रीब्यूशन' },
+              { key: 'len_den' as const, label: '🔄 लेन-देन' },
+              { key: 'dukandar_diary' as const, label: '📖 दुकानदार डायरी' },
+              { key: 'archived' as const, label: 'Archived' },
+            ].map((f) => (
               <button
-                key={f}
-                className={`tab ${filter === f ? 'active' : ''}`}
-                onClick={() => setFilter(f)}
+                key={f.key}
+                className={`tab ${filter === f.key ? 'active' : ''}`}
+                onClick={() => setFilter(f.key)}
               >
-                {f === 'all' ? 'सभी / All' : f === 'active' ? 'Active' : 'Archived'}
+                {f.label}
               </button>
             ))}
           </div>
@@ -129,27 +144,47 @@ export default function EventsPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
             {filteredEvents.map((event) => {
               const summary = getEventSummary(event.id);
+              const typeConfig = getEventTypeConfig(event.eventType);
+
               return (
                 <div key={event.id} className="card card-interactive" style={{ position: 'relative' }}>
-                  {event.isArchived && (
-                    <div style={{
-                      position: 'absolute', top: 12, right: 52,
-                      background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)',
-                      padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 500,
-                    }}>
-                      Archived
-                    </div>
-                  )}
+                  <div style={{ position: 'absolute', top: 12, right: 50, display: 'flex', gap: 6, alignItems: 'center' }}>
+                    {/* Event Type Badge */}
+                    <span
+                      style={{
+                        background: typeConfig.badgeBg,
+                        color: typeConfig.badgeColor,
+                        padding: '2px 8px',
+                        borderRadius: 12,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                    >
+                      <span>{typeConfig.icon}</span>
+                      <span>{typeConfig.shortHi}</span>
+                    </span>
 
-                  {event.isDemo && (
-                    <div style={{
-                      position: 'absolute', top: 12, right: event.isArchived ? 120 : 52,
-                      background: 'rgba(245, 158, 11, 0.15)', color: '#d97706',
-                      padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600,
-                    }}>
-                      Demo Event
-                    </div>
-                  )}
+                    {event.isArchived && (
+                      <span style={{
+                        background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)',
+                        padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 500,
+                      }}>
+                        Archived
+                      </span>
+                    )}
+
+                    {event.isDemo && (
+                      <span style={{
+                        background: 'rgba(245, 158, 11, 0.15)', color: '#d97706',
+                        padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600,
+                      }}>
+                        Demo
+                      </span>
+                    )}
+                  </div>
 
                   {/* Menu */}
                   <div style={{ position: 'absolute', top: 12, right: 12 }}>
@@ -220,7 +255,7 @@ export default function EventsPage() {
                   </div>
 
                   <Link href={`/events/detail?id=${event.id}`} style={{ textDecoration: 'none', display: 'block', padding: 20 }}>
-                    <h3 style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6, paddingRight: 40 }}>
+                    <h3 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6, paddingRight: 40 }}>
                       {event.name}
                     </h3>
                     <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 16 }}>
@@ -228,23 +263,29 @@ export default function EventsPage() {
                       {event.responsiblePerson && ` • 👤 ${event.responsiblePerson}`}
                     </p>
 
-                    {/* Mini Summary */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
-                      <div style={{ textAlign: 'center', padding: '10px 0', background: 'var(--income-bg)', borderRadius: 8 }}>
-                        <p style={{ fontSize: 11, color: 'var(--income-color)', fontWeight: 500 }}>आय / Received</p>
-                        <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--income-color)', marginTop: 2 }}>
+                    {/* Dynamic Mini Summary based on Event Type */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
+                      <div style={{ textAlign: 'center', padding: '10px 4px', background: 'var(--income-bg)', borderRadius: 8 }}>
+                        <p style={{ fontSize: 11, color: 'var(--income-color)', fontWeight: 600 }}>
+                          {event.eventType === 'dukandar_diary' ? 'जमा मिला' : event.eventType === 'contribution' ? 'अंशदान' : 'आय / In'}
+                        </p>
+                        <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--income-color)', marginTop: 2 }}>
                           {formatCurrency(summary.totalReceived)}
                         </p>
                       </div>
-                      <div style={{ textAlign: 'center', padding: '10px 0', background: 'var(--expense-bg)', borderRadius: 8 }}>
-                        <p style={{ fontSize: 11, color: 'var(--expense-color)', fontWeight: 500 }}>खर्च / Spent</p>
-                        <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--expense-color)', marginTop: 2 }}>
+                      <div style={{ textAlign: 'center', padding: '10px 4px', background: 'var(--expense-bg)', borderRadius: 8 }}>
+                        <p style={{ fontSize: 11, color: 'var(--expense-color)', fontWeight: 600 }}>
+                          {event.eventType === 'dukandar_diary' ? 'सामान उधारी' : event.eventType === 'contribution' ? 'समूह खर्च' : 'खर्च / Out'}
+                        </p>
+                        <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--expense-color)', marginTop: 2 }}>
                           {formatCurrency(summary.totalSpent)}
                         </p>
                       </div>
-                      <div style={{ textAlign: 'center', padding: '10px 0', background: 'var(--brand-primary-light)', borderRadius: 8 }}>
-                        <p style={{ fontSize: 11, color: 'var(--brand-primary)', fontWeight: 500 }}>शेष / Balance</p>
-                        <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--brand-primary)', marginTop: 2 }}>
+                      <div style={{ textAlign: 'center', padding: '10px 4px', background: 'var(--brand-primary-light)', borderRadius: 8 }}>
+                        <p style={{ fontSize: 11, color: 'var(--brand-primary)', fontWeight: 600 }}>
+                          {event.eventType === 'dukandar_diary' ? 'नेट बाकी' : event.eventType === 'contribution' ? 'फंड बचत' : 'शेष / Bal'}
+                        </p>
+                        <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--brand-primary)', marginTop: 2 }}>
                           {formatCurrency(summary.balance)}
                         </p>
                       </div>
@@ -252,10 +293,10 @@ export default function EventsPage() {
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span className="badge badge-neutral">
-                        {summary.totalTransactions} transactions
+                        {summary.totalTransactions} {event.eventType === 'dukandar_diary' ? 'प्रविष्टियाँ' : 'transactions'}
                       </span>
-                      <span style={{ fontSize: 12, color: 'var(--brand-primary)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        View Details →
+                      <span style={{ fontSize: 12, color: 'var(--brand-primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        खाता विवरण देखें →
                       </span>
                     </div>
                   </Link>
