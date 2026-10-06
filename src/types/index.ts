@@ -81,6 +81,9 @@ export interface HisabEvent {
   isDemo?: boolean; // Flag to identify demo/sample events
   createdAt: string;
   updatedAt: string;
+  treasurerSignature?: string;
+  presidentSignature?: string;
+  presidentName?: string;
 }
 
 export interface MoneyReceived {
@@ -243,6 +246,9 @@ export interface AppSettings {
   demoDataDeleted?: boolean;
   dashboardViewMode?: 'both' | 'events' | 'contributions';
   includePreviousMonthBalance?: boolean;
+  defaultTreasurerSignature?: string;
+  defaultPresidentSignature?: string;
+  defaultPresidentName?: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -254,6 +260,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   demoDataDeleted: false,
   dashboardViewMode: 'both',
   includePreviousMonthBalance: true,
+  defaultTreasurerSignature: '',
+  defaultPresidentSignature: '',
+  defaultPresidentName: '',
 };
 
 export const PAYMENT_METHODS: { value: PaymentMethod; label: string; labelHi: string }[] = [

@@ -228,6 +228,11 @@ function EventDetailContent() {
                   Demo Event
                 </span>
               )}
+              {(event.treasurerSignature || event.presidentSignature) && (
+                <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 12, background: '#ecfdf5', color: '#059669', fontWeight: 600, border: '1px solid #a7f3d0' }}>
+                  ✍️ हस्ताक्षर सक्रिय
+                </span>
+              )}
             </div>
             <p className="page-subtitle">
               📆 {formatDate(event.startDate)}

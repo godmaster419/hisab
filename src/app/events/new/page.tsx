@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AppLayout from '@/components/AppLayout';
 import { useToast } from '@/components/Toast';
 import { ArrowLeft, Calendar, Save, Check } from 'lucide-react';
-import { createEvent } from '@/store';
+import { createEvent, getSettings } from '@/store';
 import { getTodayDate } from '@/utils/helpers';
 import { HisabEventType, EVENT_TYPES } from '@/types';
+import SignatureUpload from '@/components/SignatureUpload';
 
 export default function NewEventPage() {
   const router = useRouter();
@@ -20,8 +21,23 @@ export default function NewEventPage() {
     description: '',
     responsiblePerson: '',
     openingBalance: '',
+    treasurerSignature: '',
+    presidentSignature: '',
+    presidentName: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const settings = getSettings();
+    if (settings.defaultTreasurerSignature || settings.defaultPresidentSignature || settings.defaultPresidentName) {
+      setForm((prev) => ({
+        ...prev,
+        treasurerSignature: prev.treasurerSignature || settings.defaultTreasurerSignature || '',
+        presidentSignature: prev.presidentSignature || settings.defaultPresidentSignature || '',
+        presidentName: prev.presidentName || settings.defaultPresidentName || '',
+      }));
+    }
+  }, []);
 
   const selectedTypeConfig = EVENT_TYPES.find((t) => t.value === form.eventType) || EVENT_TYPES[1];
 
@@ -52,6 +68,9 @@ export default function NewEventPage() {
       description: form.description.trim(),
       responsiblePerson: form.responsiblePerson.trim(),
       openingBalance: form.openingBalance ? Number(form.openingBalance) : 0,
+      treasurerSignature: form.treasurerSignature,
+      presidentSignature: form.presidentSignature,
+      presidentName: form.presidentName.trim(),
     });
 
     showToast('Event सफलतापूर्वक बनाया गया!');
@@ -240,6 +259,62 @@ export default function NewEventPage() {
                   />
                 </div>
                 {errors.openingBalance && <div className="form-error">{errors.openingBalance}</div>}
+              </div>
+            </div>
+
+            {/* Digital Signatures Section */}
+            <div
+              style={{
+                marginTop: 24,
+                marginBottom: 20,
+                padding: '20px',
+                background: 'var(--bg-secondary, #f8fafc)',
+                borderRadius: 12,
+                border: '1px solid var(--border-color)',
+              }}
+            >
+              <div style={{ marginBottom: 12 }}>
+                <h3 style={{ fontSize: 14.5, fontWeight: 700, margin: '0 0 4px 0', color: 'var(--text-primary)' }}>
+                  ✍️ डिजिटल हस्ताक्षर (Digital Signatures - Optional)
+                </h3>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>
+                  कोषाध्यक्ष और अध्यक्ष के हस्ताक्षर (PNG इमेज) अपलोड करें। यह रिपोर्ट और PDF में खाली लाइन की जगह सीधे दिखाई देगा।
+                </p>
+              </div>
+
+              <div className="grid-2">
+                <div>
+                  <SignatureUpload
+                    label={form.eventType === 'contribution' ? 'कोषाध्यक्ष / जिम्मेदार सदस्य' : 'कोषाध्यक्ष / जिम्मेदार व्यक्ति'}
+                    subLabel="पारदर्शी (Transparent) PNG हस्ताक्षर अपलोड करें"
+                    value={form.treasurerSignature}
+                    onChange={(val) => setForm({ ...form, treasurerSignature: val })}
+                    onClear={() => setForm({ ...form, treasurerSignature: '' })}
+                    placeholderText="कोषाध्यक्ष का PNG हस्ताक्षर अपलोड करें"
+                  />
+                </div>
+                <div>
+                  <SignatureUpload
+                    label={form.eventType === 'contribution' ? 'अध्यक्ष / सचिव का हस्ताक्षर' : 'हिसाब जांचकर्ता / अध्यक्ष का हस्ताक्षर'}
+                    subLabel="पारदर्शी (Transparent) PNG हस्ताक्षर अपलोड करें"
+                    value={form.presidentSignature}
+                    onChange={(val) => setForm({ ...form, presidentSignature: val })}
+                    onClear={() => setForm({ ...form, presidentSignature: '' })}
+                    placeholderText="अध्यक्ष / सचिव का PNG हस्ताक्षर अपलोड करें"
+                  />
+                  <div className="form-group" style={{ marginTop: 8 }}>
+                    <label className="form-label" style={{ fontSize: 12, marginBottom: 4 }}>
+                      अध्यक्ष / सचिव का नाम या पद (वैकल्पिक)
+                    </label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="जैसे: श्री रमेश कुमार (अध्यक्ष)"
+                      value={form.presidentName}
+                      onChange={(e) => setForm({ ...form, presidentName: e.target.value })}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 

@@ -16,7 +16,7 @@ import {
   getCurrentMonthStr,
   formatHindiMonth,
 } from '@/utils/helpers';
-import { getEventSummary, getCategorySummary, getPersonSummary, getPeople } from '@/store';
+import { getEventSummary, getCategorySummary, getPersonSummary, getPeople, getSettings } from '@/store';
 import { NotoSansDevanagariRegular, NotoSansDevanagariBold } from '@/utils/devanagariFont';
 
 // ============================================
@@ -734,6 +734,10 @@ export function generateEventReportHTML(
   const summary = getEventSummary(event.id);
   const categories = getCategorySummary(event.id);
   const people = getPersonSummary(event.id);
+  const settings = getSettings();
+  const treasurerSig = event.treasurerSignature || settings.defaultTreasurerSignature || '';
+  const presidentSig = event.presidentSignature || settings.defaultPresidentSignature || '';
+  const presidentName = event.presidentName || settings.defaultPresidentName || '';
 
   const statusText = event.isArchived
     ? 'पूर्ण / पुरालेख (Archived)'
@@ -1223,11 +1227,32 @@ export function generateEventReportHTML(
     .sig-box {
       border: 1px dashed #cbd5e1;
       border-radius: 8px;
-      padding: 16px;
+      padding: 14px 16px;
       text-align: center;
+      background: #fafbfc;
+      min-height: 105px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+    .sig-img-container {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 6px;
+    }
+    .sig-img {
+      max-height: 44px;
+      max-width: 160px;
+      object-fit: contain;
     }
     .sig-line {
-      height: 40px;
+      height: 38px;
+      border-bottom: 1px solid #94a3b8;
+      margin-bottom: 8px;
+    }
+    .sig-divider {
       border-bottom: 1px solid #94a3b8;
       margin-bottom: 8px;
     }
@@ -1239,6 +1264,7 @@ export function generateEventReportHTML(
     .sig-sub {
       font-size: 11px;
       color: #64748b;
+      margin-top: 2px;
     }
 
     /* Footer */
@@ -1565,14 +1591,28 @@ export function generateEventReportHTML(
     <!-- Verification & Signatures -->
     <div class="avoid-break signatures-block">
       <div class="sig-box">
-        <div class="sig-line"></div>
+        ${treasurerSig ? `
+          <div class="sig-img-container">
+            <img src="${treasurerSig}" alt="कोषाध्यक्ष हस्ताक्षर" class="sig-img" />
+          </div>
+          <div class="sig-divider"></div>
+        ` : `
+          <div class="sig-line"></div>
+        `}
         <div class="sig-label">${isContribution ? 'कोषाध्यक्ष / जिम्मेदार सदस्य' : 'जिम्मेदार व्यक्ति के हस्ताक्षर'}</div>
         <div class="sig-sub">${escapeHtml(event.responsiblePerson || (isContribution ? 'कोषाध्यक्ष' : 'हस्ताक्षर'))}</div>
       </div>
       <div class="sig-box">
-        <div class="sig-line"></div>
+        ${presidentSig ? `
+          <div class="sig-img-container">
+            <img src="${presidentSig}" alt="अध्यक्ष हस्ताक्षर" class="sig-img" />
+          </div>
+          <div class="sig-divider"></div>
+        ` : `
+          <div class="sig-line"></div>
+        `}
         <div class="sig-label">${isContribution ? 'अध्यक्ष / सचिव के हस्ताक्षर' : 'हिसाब जांचकर्ता / कोषाध्यक्ष'}</div>
-        <div class="sig-sub">हस्ताक्षर व मुहर</div>
+        <div class="sig-sub">${escapeHtml(presidentName || 'हस्ताक्षर व मुहर')}</div>
       </div>
     </div>
 

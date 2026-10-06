@@ -12,6 +12,7 @@ import { getSettings, updateSettings, exportAllData, importData, hasDemoData, de
 import { exportBackupJSON } from '@/utils/export';
 import { downloadHindiTestPDF } from '@/utils/pdf';
 import { AppSettings } from '@/types';
+import SignatureUpload from '@/components/SignatureUpload';
 
 export default function SettingsPage() {
   const { showToast } = useToast();
@@ -29,6 +30,23 @@ export default function SettingsPage() {
     setSettings(getSettings());
     setDemoExists(hasDemoData());
   }, []);
+
+  const handleUpdateTreasurerSignature = (sig: string) => {
+    updateSettings({ defaultTreasurerSignature: sig });
+    setSettings((prev) => ({ ...prev, defaultTreasurerSignature: sig }));
+    showToast(sig ? 'कोषाध्यक्ष हस्ताक्षर सुरक्षित किया गया' : 'कोषाध्यक्ष हस्ताक्षर हटा दिया गया');
+  };
+
+  const handleUpdatePresidentSignature = (sig: string) => {
+    updateSettings({ defaultPresidentSignature: sig });
+    setSettings((prev) => ({ ...prev, defaultPresidentSignature: sig }));
+    showToast(sig ? 'अध्यक्ष हस्ताक्षर सुरक्षित किया गया' : 'अध्यक्ष हस्ताक्षर हटा दिया गया');
+  };
+
+  const handleUpdatePresidentName = (name: string) => {
+    updateSettings({ defaultPresidentName: name });
+    setSettings((prev) => ({ ...prev, defaultPresidentName: name }));
+  };
 
   const handleThemeChange = (theme: AppSettings['theme']) => {
     const effectiveTheme = theme === 'system'
@@ -127,6 +145,51 @@ export default function SettingsPage() {
             <div>
               <p style={{ fontSize: 15, fontWeight: 600 }}>Indian Rupee (INR)</p>
               <p style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>भारतीय रुपया — Indian numbering format (₹1,25,000)</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Default Digital Signatures */}
+        <div className="card" style={{ padding: 24, marginBottom: 16 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+            ✍️ डिफ़ॉल्ट डिजिटल हस्ताक्षर / Default Signatures
+          </h3>
+          <p style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginBottom: 20 }}>
+            यहाँ अपने डिफ़ॉल्ट हस्ताक्षर अपलोड करें। जब आप किसी भी Event की PDF रिपोर्ट निकालेंगे, तो ये हस्ताक्षर अपने आप रिपोर्ट में खाली लाइन की जगह दिखेंगे।
+          </p>
+
+          <div className="grid-2">
+            <div>
+              <SignatureUpload
+                label="डिफ़ॉल्ट कोषाध्यक्ष हस्ताक्षर"
+                subLabel="पारदर्शी (Transparent) PNG हस्ताक्षर अपलोड करें"
+                value={settings.defaultTreasurerSignature}
+                onChange={handleUpdateTreasurerSignature}
+                onClear={() => handleUpdateTreasurerSignature('')}
+                placeholderText="कोषाध्यक्ष का PNG हस्ताक्षर चुनें"
+              />
+            </div>
+            <div>
+              <SignatureUpload
+                label="डिफ़ॉल्ट अध्यक्ष / सचिव हस्ताक्षर"
+                subLabel="पारदर्शी (Transparent) PNG हस्ताक्षर अपलोड करें"
+                value={settings.defaultPresidentSignature}
+                onChange={handleUpdatePresidentSignature}
+                onClear={() => handleUpdatePresidentSignature('')}
+                placeholderText="अध्यक्ष का PNG हस्ताक्षर चुनें"
+              />
+              <div className="form-group" style={{ marginTop: 8 }}>
+                <label className="form-label" style={{ fontSize: 12, marginBottom: 4 }}>
+                  डिफ़ॉल्ट अध्यक्ष / सचिव का नाम
+                </label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="जैसे: श्री रमेश कुमार (अध्यक्ष)"
+                  value={settings.defaultPresidentName || ''}
+                  onChange={(e) => handleUpdatePresidentName(e.target.value)}
+                />
+              </div>
             </div>
           </div>
         </div>
