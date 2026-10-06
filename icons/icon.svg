@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="hisabGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="50%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- App Icon Background -->
+  <rect width="512" height="512" rx="112" fill="url(#hisabGrad)" />
+
+  <!-- Inner Subtle Border -->
+  <rect x="12" y="12" width="488" height="488" rx="100" fill="none" stroke="#ffffff" stroke-opacity="0.15" stroke-width="4" />
+
+  <!-- Card / Book Shape -->
+  <g filter="url(#shadow)">
+    <!-- Main Rupee Symbol / Logo -->
+    <circle cx="256" cy="230" r="130" fill="#ffffff" fill-opacity="0.18" />
+    
+    <!-- Indian Rupee Symbol -->
+    <path d="M190 150 H322 M190 190 H292 M190 150 V230 C230 230 270 220 270 180 M220 230 L315 330" 
+          stroke="#ffffff" stroke-width="32" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  </g>
+
+  <!-- Tagline Text -->
+  <text x="256" y="420" text-anchor="middle" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="44" font-weight="800" letter-spacing="4">HISAB</text>
+  <text x="256" y="455" text-anchor="middle" fill="#e0e7ff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="500" letter-spacing="1">हर पैसे का हिसाब</text>
+</svg>
