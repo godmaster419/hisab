@@ -2,7 +2,7 @@
 // HISAB - Type Definitions
 // ============================================
 
-export type HisabEventType = 'contribution' | 'len_den' | 'dukandar_diary';
+export type HisabEventType = 'contribution' | 'len_den' | 'dukandar_diary' | 'personal_expense';
 
 export interface EventTypeConfig {
   value: HisabEventType;
@@ -20,6 +20,20 @@ export interface EventTypeConfig {
 }
 
 export const EVENT_TYPES: EventTypeConfig[] = [
+  {
+    value: 'personal_expense',
+    label: 'Personal Expense',
+    labelHi: 'पर्सनल खर्च / दैनिक व्यय (Daily Expenses)',
+    shortHi: 'पर्सनल खर्च',
+    descHi: 'दैनिक व्यक्तिगत खर्च, घर-परिवार, पॉकेट मनी और डेली बजट हिसाब',
+    icon: '👛',
+    badgeBg: 'rgba(236, 72, 153, 0.12)',
+    badgeColor: '#ec4899',
+    incomeLabel: 'रुपये आए / आय / पॉकेट मनी (Income In)',
+    expenseLabel: 'दैनिक खर्च (Daily Expenses)',
+    balanceLabel: 'बचा हुआ बैलेंस (Savings / Balance)',
+    personRole: 'व्यक्ति का नाम / मेरा नाम (My Name / Person)',
+  },
   {
     value: 'contribution',
     label: 'Contribution',
@@ -160,6 +174,8 @@ export type ExpenseCategory =
   | 'equipment'
   | 'shopping'
   | 'refreshment'
+  | 'bills'
+  | 'medical'
   | 'miscellaneous'
   | 'other';
 
@@ -273,13 +289,15 @@ export const PAYMENT_METHODS: { value: PaymentMethod; label: string; labelHi: st
 ];
 
 export const EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string; labelHi: string; icon: string }[] = [
-  { value: 'food', label: 'Food', labelHi: 'खाना', icon: '🍽️' },
+  { value: 'food', label: 'Food / Grocery', labelHi: 'खाना / किराना', icon: '🍽️' },
+  { value: 'transportation', label: 'Transport / Fuel', labelHi: 'यातायात / पेट्रोल', icon: '🚗' },
+  { value: 'shopping', label: 'Shopping', labelHi: 'खरीदारी', icon: '🛍️' },
+  { value: 'bills', label: 'Bills / Recharge', labelHi: 'बिल व मोबाइल रिचार्ज', icon: '📱' },
+  { value: 'medical', label: 'Medical / Health', labelHi: 'दवा व इलाज', icon: '💊' },
+  { value: 'refreshment', label: 'Refreshment / Snacks', labelHi: 'चाय-नाश्ता', icon: '🥤' },
   { value: 'decoration', label: 'Decoration', labelHi: 'सजावट', icon: '🎨' },
-  { value: 'transportation', label: 'Transportation', labelHi: 'यातायात', icon: '🚗' },
   { value: 'printing', label: 'Printing', labelHi: 'प्रिंटिंग', icon: '🖨️' },
   { value: 'equipment', label: 'Equipment', labelHi: 'उपकरण', icon: '🔧' },
-  { value: 'shopping', label: 'Shopping', labelHi: 'खरीदारी', icon: '🛍️' },
-  { value: 'refreshment', label: 'Refreshment', labelHi: 'जलपान', icon: '🥤' },
   { value: 'miscellaneous', label: 'Miscellaneous', labelHi: 'विविध', icon: '📦' },
   { value: 'other', label: 'Other', labelHi: 'अन्य', icon: '📋' },
 ];
@@ -290,7 +308,11 @@ export const ITEM_UNITS = [
 ];
 
 export const PURPOSE_SUGGESTIONS = [
-  'Event Fund', 'Decoration', 'Food', 'Transportation', 'General Expense',
-  'Guest Arrangement', 'Printing', 'Equipment', 'Refreshment', 'Venue',
-  'Sound System', 'Photography', 'Gifts', 'Cleaning', 'Security',
+  'दैनिक खर्च (Daily Expense)', 'सब्जी / फल (Vegetables)', 'दूध व राशन (Milk & Ration)',
+  'किराना सामान (Grocery)', 'चाय-नाश्ता (Tea & Snacks)', 'पेट्रोल / यात्रा (Petrol/Travel)',
+  'मोबाइल रिचार्ज (Mobile Recharge)', 'बिजली / पानी बिल (Utility Bills)', 'दवा व डॉक्टर (Medicine)',
+  'पॉकेट मनी (Pocket Money)', 'मासिक सैलरी (Monthly Salary)', 'Event Fund', 'Decoration',
+  'Food', 'Transportation', 'General Expense', 'Guest Arrangement',
+  'Printing', 'Equipment', 'Refreshment', 'Venue', 'Sound System',
+  'Photography', 'Gifts', 'Cleaning', 'Security',
 ];

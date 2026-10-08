@@ -297,6 +297,7 @@ export default function DashboardPage() {
                     const typeConfig = getEventTypeConfig(event.eventType);
                     const isDukandar = event.eventType === 'dukandar_diary';
                     const isContribution = event.eventType === 'contribution';
+                    const isPersonal = event.eventType === 'personal_expense';
 
                     return (
                       <Link
@@ -342,7 +343,7 @@ export default function DashboardPage() {
                               {formatCurrency(evSummary.balance)}
                             </p>
                             <p style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                              {evSummary.totalTransactions} {isDukandar ? 'प्रविष्टियाँ' : 'transactions'}
+                              {evSummary.totalTransactions} {isDukandar ? 'प्रविष्टियाँ' : isPersonal ? 'खर्चे' : 'transactions'}
                             </p>
                           </div>
                         </div>
@@ -351,10 +352,10 @@ export default function DashboardPage() {
                           fontSize: 12, color: 'var(--text-secondary)',
                         }}>
                           <span style={{ color: 'var(--income-color)' }}>
-                            ↑ {isDukandar ? 'जमा ' : isContribution ? 'अंशदान ' : ''}{formatCurrency(evSummary.totalReceived)}
+                            ↑ {isDukandar ? 'जमा ' : isContribution ? 'अंशदान ' : isPersonal ? 'आय ' : ''}{formatCurrency(evSummary.totalReceived)}
                           </span>
                           <span style={{ color: 'var(--expense-color)' }}>
-                            ↓ {isDukandar ? 'सामान ' : isContribution ? 'खर्च ' : ''}{formatCurrency(evSummary.totalSpent)}
+                            ↓ {isDukandar ? 'सामान ' : isContribution ? 'खर्च ' : isPersonal ? 'दैनिक खर्च ' : ''}{formatCurrency(evSummary.totalSpent)}
                           </span>
                         </div>
                       </Link>

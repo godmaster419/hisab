@@ -154,13 +154,15 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
  * Category label map
  */
 export const CATEGORY_LABELS: Record<string, { en: string; hi: string }> = {
-  food: { en: 'Food', hi: 'खाना' },
+  food: { en: 'Food / Grocery', hi: 'खाना / किराना' },
   decoration: { en: 'Decoration', hi: 'सजावट' },
-  transportation: { en: 'Transportation', hi: 'यातायात' },
+  transportation: { en: 'Transport / Fuel', hi: 'यातायात / पेट्रोल' },
   printing: { en: 'Printing', hi: 'प्रिंटिंग' },
   equipment: { en: 'Equipment', hi: 'उपकरण' },
   shopping: { en: 'Shopping', hi: 'खरीदारी' },
-  refreshment: { en: 'Refreshment', hi: 'जलपान' },
+  refreshment: { en: 'Refreshment / Snacks', hi: 'चाय-नाश्ता' },
+  bills: { en: 'Bills / Recharge', hi: 'बिल व मोबाइल रिचार्ज' },
+  medical: { en: 'Medical / Health', hi: 'दवा व इलाज' },
   miscellaneous: { en: 'Miscellaneous', hi: 'विविध' },
   other: { en: 'Other', hi: 'अन्य' },
 };

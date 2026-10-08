@@ -158,13 +158,16 @@ export default function AddExpenseModal({ isOpen, onClose, eventId, eventType, e
 
   const isDukandar = eventType === 'dukandar_diary';
   const isContribution = eventType === 'contribution';
+  const isPersonal = eventType === 'personal_expense';
 
   const modalTitle = editData
-    ? (isDukandar ? '✏️ सामान/उधारी एडिट करें' : isContribution ? '✏️ समूह खर्च एडिट करें' : '✏️ खर्च एडिट करें')
-    : (isDukandar ? '🛒 ग्राहक को सामान दिया / उधारी दर्ज करें (Udhar)' : isContribution ? '🧾 समूह खर्च जोड़ें / Group Expense' : '🧾 खर्च जोड़ें / Add Expense');
+    ? (isDukandar ? '✏️ सामान/उधारी एडिट करें' : isContribution ? '✏️ समूह खर्च एडिट करें' : isPersonal ? '✏️ दैनिक खर्च एडिट करें' : '✏️ खर्च एडिट करें')
+    : (isDukandar ? '🛒 ग्राहक को सामान दिया / उधारी दर्ज करें (Udhar)' : isContribution ? '🧾 समूह खर्च जोड़ें / Group Expense' : isPersonal ? '🛒 दैनिक खर्च जोड़ें / Add Daily Expense' : '🧾 खर्च जोड़ें / Add Expense');
 
   const amountLabel = isDukandar
     ? 'सामान की कुल कीमत / Total Amount (उधारी) *'
+    : isPersonal
+    ? 'दैनिक खर्च राशि / Amount Spent *'
     : isContribution
     ? 'खर्च राशि / Expense Amount *'
     : 'खर्च राशि / Expense Amount *';
@@ -173,17 +176,21 @@ export default function AddExpenseModal({ isOpen, onClose, eventId, eventType, e
     ? 'दुकानदार / देने वाला / Given By *'
     : isContribution
     ? 'खर्च करने वाला सदस्य / Spent By Member *'
+    : isPersonal
+    ? 'किसने खर्च किया / Spent By *'
     : 'खर्च करने वाला / Spent By *';
 
-  const spentByPlaceholder = isDukandar ? 'जैसे: दुकानदार / दुकान का नाम' : isContribution ? 'जैसे: राजेश कुमार (सदस्य)' : 'जैसे: राजेश कुमार';
+  const spentByPlaceholder = isDukandar ? 'जैसे: दुकानदार / दुकान का नाम' : isContribution ? 'जैसे: राजेश कुमार (सदस्य)' : isPersonal ? 'जैसे: स्वयं (मेरा नाम)' : 'जैसे: राजेश कुमार';
 
   const paidToLabel = isDukandar
     ? 'ग्राहक का नाम (सामान लेने वाला) / Customer Name (Udhar) *'
     : isContribution
     ? 'किसे भुगतान किया / Paid To (Vendor/Person) *'
+    : isPersonal
+    ? 'दुकानदार / किसे भुगतान किया (Paid To / Shop) *'
     : 'पैसा प्राप्त करने वाला / Paid To *';
 
-  const paidToPlaceholder = isDukandar ? 'जैसे: रमेश कुमार (ग्राहक)' : isContribution ? 'जैसे: शर्मा टेंट हाउस' : 'जैसे: शर्मा टेंट हाउस';
+  const paidToPlaceholder = isDukandar ? 'जैसे: रमेश कुमार (ग्राहक)' : isContribution ? 'जैसे: शर्मा टेंट हाउस' : isPersonal ? 'जैसे: किराना स्टोर, पेट्रोल पंप, चाय वाला, सब्जी मंडी' : 'जैसे: शर्मा टेंट हाउस';
 
   if (!isOpen) return null;
 
@@ -278,11 +285,11 @@ export default function AddExpenseModal({ isOpen, onClose, eventId, eventType, e
             <div className="grid-2">
               {/* Purpose */}
               <div className="form-group">
-                <label className="form-label">{isDukandar ? 'सामान का संक्षिप्त विवरण / Items Summary' : isContribution ? 'खर्च का उद्देश्य / Purpose' : 'उद्देश्य / Purpose'}</label>
+                <label className="form-label">{isDukandar ? 'सामान का संक्षिप्त विवरण / Items Summary' : isContribution ? 'खर्च का उद्देश्य / Purpose' : isPersonal ? 'खर्च की मद / विवरण (Expense Details)' : 'उद्देश्य / Purpose'}</label>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder={isDukandar ? 'जैसे: 2 बोरी चावल, तेल, दाल (सामान)' : 'जैसे: Stage Decoration'}
+                  placeholder={isDukandar ? 'जैसे: 2 बोरी चावल, तेल, दाल (सामान)' : isPersonal ? 'जैसे: पेट्रोल, चाय-नाश्ता, हरी सब्जी, दूध' : 'जैसे: Stage Decoration'}
                   value={form.purpose}
                   onChange={(e) => setForm({ ...form, purpose: e.target.value })}
                   list="expense-purpose-suggestions"
@@ -434,7 +441,7 @@ export default function AddExpenseModal({ isOpen, onClose, eventId, eventType, e
             </button>
             <button type="submit" className="btn btn-expense" style={{ background: '#ef4444' }}>
               <ShoppingCart size={16} />
-              {editData ? 'अपडेट करें / Update' : isDukandar ? 'सामान/उधारी दर्ज करें / Save Credit' : isContribution ? 'समूह खर्च जोड़ें / Save' : 'खर्च जोड़ें / Save Expense'}
+              {editData ? 'अपडेट करें / Update' : isDukandar ? 'सामान/उधारी दर्ज करें / Save Credit' : isContribution ? 'समूह खर्च जोड़ें / Save' : isPersonal ? 'दैनिक खर्च जोड़ें / Save Daily Expense' : 'खर्च जोड़ें / Save Expense'}
             </button>
           </div>
         </form>

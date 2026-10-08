@@ -964,7 +964,23 @@ export function loadSampleData(): void {
     updatedAt: '2026-10-01T08:00:00Z',
   };
 
-  setItem(KEYS.EVENTS, [event, event2, event3]);
+  const event4Id = generateId();
+  const event4: HisabEvent = {
+    id: event4Id,
+    name: 'मेरा पर्सनल दैनिक खर्च (Demo)',
+    eventType: 'personal_expense',
+    startDate: '2026-10-01',
+    endDate: '2026-10-31',
+    description: 'दैनिक व्यक्तिगत खर्च, पॉकेट मनी, चाय-नाश्ता, पेट्रोल और घरेलू बजट डायरी',
+    responsiblePerson: 'सूरज (स्वयं)',
+    openingBalance: 3000,
+    isArchived: false,
+    isDemo: true,
+    createdAt: '2026-10-01T08:00:00Z',
+    updatedAt: '2026-10-01T08:00:00Z',
+  };
+
+  setItem(KEYS.EVENTS, [event, event2, event3, event4]);
 
   const moneyEntries: MoneyReceived[] = [
     {
@@ -1012,6 +1028,15 @@ export function loadSampleData(): void {
     {
       id: generateId(), eventId: event3Id, amount: 1000, givenBy: 'विकास गुप्ता (ग्राहक)', depositedWith: 'रमेश किराना स्टोर',
       date: '2026-10-05', purpose: 'उधारी चुकाया / Cash Payment', paymentMethod: 'cash', note: '', isDemo: true, createdAt: '2026-10-05T15:00:00Z',
+    },
+    // Personal Expense demo entries (Salary / Pocket Money / Income)
+    {
+      id: generateId(), eventId: event4Id, amount: 8000, givenBy: 'मासिक सैलरी', depositedWith: 'बैंक खाता / UPI',
+      date: '2026-10-01', purpose: 'मासिक सैलरी (Monthly Salary)', paymentMethod: 'bank_transfer', note: 'अकाउंट में प्राप्त', isDemo: true, createdAt: '2026-10-01T09:00:00Z',
+    },
+    {
+      id: generateId(), eventId: event4Id, amount: 2000, givenBy: 'घर से / पॉकेट मनी', depositedWith: 'कैश (नकद)',
+      date: '2026-10-03', purpose: 'पॉकेट मनी (Pocket Money)', paymentMethod: 'cash', note: 'हाथ में मिला', isDemo: true, createdAt: '2026-10-03T10:00:00Z',
     },
   ];
   setItem(KEYS.MONEY, moneyEntries);
@@ -1098,6 +1123,38 @@ export function loadSampleData(): void {
         { id: generateId(), itemName: 'मसाले व चायपत्ती', quantity: 1, unit: 'packet', rate: 650, total: 650 },
       ],
     },
+    // Personal Daily Expenses demo entries
+    {
+      id: generateId(), eventId: event4Id, amount: 240, spentBy: 'सूरज (स्वयं)', paidTo: 'शर्मा टी स्टॉल',
+      date: '2026-10-02', category: 'refreshment', purpose: 'चाय-नाश्ता व समोसा',
+      paymentMethod: 'upi', note: '', isDemo: true, createdAt: '2026-10-02T09:30:00Z',
+      items: [
+        { id: generateId(), itemName: 'चाय व नाश्ता', quantity: 1, unit: 'plate', rate: 240, total: 240 },
+      ],
+    },
+    {
+      id: generateId(), eventId: event4Id, amount: 500, spentBy: 'सूरज (स्वयं)', paidTo: 'भारत पेट्रोलियम',
+      date: '2026-10-03', category: 'transportation', purpose: 'बाइक पेट्रोल / Fuel',
+      paymentMethod: 'upi', note: 'पेट्रोल भरवाया', isDemo: true, createdAt: '2026-10-03T11:00:00Z',
+      items: [
+        { id: generateId(), itemName: 'पेट्रोल', quantity: 5, unit: 'litre', rate: 100, total: 500 },
+      ],
+    },
+    {
+      id: generateId(), eventId: event4Id, amount: 350, spentBy: 'सूरज (स्वयं)', paidTo: 'सब्जी मंडी',
+      date: '2026-10-04', category: 'food', purpose: 'सब्जी व फल (Daily Vegetables)',
+      paymentMethod: 'cash', note: '', isDemo: true, createdAt: '2026-10-04T18:00:00Z',
+      items: [
+        { id: generateId(), itemName: 'आलू-प्याज व हरी सब्जी', quantity: 1, unit: 'bag', rate: 250, total: 250 },
+        { id: generateId(), itemName: 'फल (केला/सेब)', quantity: 1, unit: 'kg', rate: 100, total: 100 },
+      ],
+    },
+    {
+      id: generateId(), eventId: event4Id, amount: 299, spentBy: 'सूरज (स्वयं)', paidTo: 'Jio Store',
+      date: '2026-10-05', category: 'bills', purpose: 'मोबाइल रिचार्ज (Monthly Recharge)',
+      paymentMethod: 'upi', note: 'GPay से रिचार्ज', isDemo: true, createdAt: '2026-10-05T12:00:00Z',
+      items: [],
+    },
   ];
   setItem(KEYS.EXPENSES, expenses);
 
@@ -1106,6 +1163,7 @@ export function loadSampleData(): void {
     'सुरेश कुमार', 'रमेश प्रसाद', 'अमित सिंह', 'राजेश कुमार', 'विक्रम शर्मा', 'मनोज गुप्ता',
     'राहुल वर्मा', 'दीपक जायसवाल', 'शर्मा टेंट हाउस', 'शर्मा स्वीट्स', 'गुप्ता स्टोर',
     'डिजिटल प्रिंट शॉप', 'साउंड सिस्टम रेंटल', 'ऑटो स्टैंड', 'स्पोर्ट्स शॉप',
+    'सूरज (स्वयं)', 'शर्मा टी स्टॉल', 'भारत पेट्रोलियम', 'सब्जी मंडी', 'Jio Store',
   ];
   setItem(KEYS.PEOPLE_CACHE, peopleNames);
   

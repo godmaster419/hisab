@@ -162,6 +162,8 @@ function EditEventContent() {
                   ? 'दुकान / खाते का नाम *'
                   : form.eventType === 'contribution'
                   ? 'समिति / फंड का नाम *'
+                  : form.eventType === 'personal_expense'
+                  ? 'पर्सनल डायरी / खाते का नाम (Personal Expense Book) *'
                   : 'Event का नाम *'}
               </label>
               <input type="text" className="form-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -193,6 +195,8 @@ function EditEventContent() {
                     ? 'प्रारंभिक उधारी / पुराना बकाया (₹)'
                     : form.eventType === 'contribution'
                     ? 'शुरुआती फंड राशि (₹)'
+                    : form.eventType === 'personal_expense'
+                    ? 'शुरुआती बचत / पॉकेट मनी बैलेंस (₹)'
                     : 'शुरुआती राशि (₹)'}
                 </label>
                 <div style={{ position: 'relative' }}>
@@ -224,17 +228,17 @@ function EditEventContent() {
               <div className="grid-2">
                 <div>
                   <SignatureUpload
-                    label={form.eventType === 'contribution' ? 'कोषाध्यक्ष / जिम्मेदार सदस्य' : 'कोषाध्यक्ष / जिम्मेदार व्यक्ति'}
+                    label={form.eventType === 'contribution' ? 'कोषाध्यक्ष / जिम्मेदार सदस्य' : form.eventType === 'personal_expense' ? 'खाताधारक / मेरा हस्ताक्षर' : 'कोषाध्यक्ष / जिम्मेदार व्यक्ति'}
                     subLabel="पारदर्शी (Transparent) PNG हस्ताक्षर अपलोड करें"
                     value={form.treasurerSignature}
                     onChange={(val) => setForm({ ...form, treasurerSignature: val })}
                     onClear={() => setForm({ ...form, treasurerSignature: '' })}
-                    placeholderText="कोषाध्यक्ष का PNG हस्ताक्षर अपलोड करें"
+                    placeholderText={form.eventType === 'personal_expense' ? 'खाताधारक का हस्ताक्षर अपलोड करें' : 'कोषाध्यक्ष का PNG हस्ताक्षर अपलोड करें'}
                   />
                 </div>
                 <div>
                   <SignatureUpload
-                    label={form.eventType === 'contribution' ? 'अध्यक्ष / सचिव का हस्ताक्षर' : 'हिसाब जांचकर्ता / अध्यक्ष का हस्ताक्षर'}
+                    label={form.eventType === 'contribution' ? 'अध्यक्ष / सचिव का हस्ताक्षर' : form.eventType === 'personal_expense' ? 'परिवार / अभिभावक का हस्ताक्षर (वैकल्पिक)' : 'हिसाब जांचकर्ता / अध्यक्ष का हस्ताक्षर'}
                     subLabel="पारदर्शी (Transparent) PNG हस्ताक्षर अपलोड करें"
                     value={form.presidentSignature}
                     onChange={(val) => setForm({ ...form, presidentSignature: val })}

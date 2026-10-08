@@ -129,31 +129,38 @@ export default function AddMoneyModal({
 
   const isDukandar = eventType === 'dukandar_diary';
   const isContribution = eventType === 'contribution';
+  const isPersonal = eventType === 'personal_expense';
 
   const titleText = editData
-    ? (isDukandar ? '✏️ जमा राशि एडिट करें' : isContribution ? '✏️ अंशदान एडिट करें' : '✏️ पैसा एडिट करें')
-    : (isDukandar ? '💰 ग्राहक से जमा मिला / Received Payment (Jama)' : isContribution ? '💰 अंशदान मिला / Member Contribution' : '💰 पैसा जोड़ें / Add Money');
+    ? (isDukandar ? '✏️ जमा राशि एडिट करें' : isContribution ? '✏️ अंशदान एडिट करें' : isPersonal ? '✏️ आय/पॉकेट मनी एडिट करें' : '✏️ पैसा एडिट करें')
+    : (isDukandar ? '💰 ग्राहक से जमा मिला / Received Payment (Jama)' : isContribution ? '💰 अंशदान मिला / Member Contribution' : isPersonal ? '💰 आय / पॉकेट मनी जोड़ें / Add Income' : '💰 पैसा जोड़ें / Add Money');
 
   const givenByLabel = isDukandar
     ? 'ग्राहक का नाम (पैसा देने वाला) / Customer Name *'
     : isContribution
     ? 'सदस्य का नाम (अंशदान देने वाला) / Member Name *'
+    : isPersonal
+    ? 'पैसा कहाँ से मिला / स्रोत (Source / Given By) *'
     : 'पैसा देने वाला / Given By *';
 
-  const givenByPlaceholder = isDukandar ? 'जैसे: रमेश कुमार (ग्राहक)' : isContribution ? 'जैसे: सुरेश कुमार (सदस्य)' : 'जैसे: सुरेश कुमार';
+  const givenByPlaceholder = isDukandar ? 'जैसे: रमेश कुमार (ग्राहक)' : isContribution ? 'जैसे: सुरेश कुमार (सदस्य)' : isPersonal ? 'जैसे: सैलरी, पापा, बैंक, ट्यूशन' : 'जैसे: सुरेश कुमार';
 
   const depositedWithLabel = isDukandar
     ? 'दुकानदार / प्राप्तकर्ता / Received By *'
     : isContribution
     ? 'कोषाध्यक्ष / प्राप्तकर्ता / Received By *'
+    : isPersonal
+    ? 'किसके पास / खाता (Received In / Account) *'
     : 'पैसा जमा करने वाला / Deposited With *';
 
-  const depositedWithPlaceholder = isDukandar ? 'जैसे: दुकानदार / कैशियर' : isContribution ? 'जैसे: कोषाध्यक्ष' : 'जैसे: राजेश कुमार';
+  const depositedWithPlaceholder = isDukandar ? 'जैसे: दुकानदार / कैशियर' : isContribution ? 'जैसे: कोषाध्यक्ष' : isPersonal ? 'जैसे: स्वयं (Self), बैंक खाता, GooglePay/Paytm' : 'जैसे: राजेश कुमार';
 
   const purposePlaceholder = isDukandar
     ? 'जैसे: पुरानी उधारी चुकाई, एडवांस जमा'
     : isContribution
     ? 'जैसे: मासिक अंशदान, विशेष सहयोग'
+    : isPersonal
+    ? 'जैसे: मासिक सैलरी, पॉकेट मनी, घर खर्च के लिए'
     : 'जैसे: Event Fund';
 
   if (!isOpen) return null;
@@ -175,7 +182,7 @@ export default function AddMoneyModal({
             {/* Amount */}
             <div className="form-group">
               <label className="form-label">
-                {isDukandar ? 'जमा राशि / Payment Amount (Jama) *' : isContribution ? 'अंशदान राशि / Contribution Amount *' : 'राशि / Amount *'}
+                {isDukandar ? 'जमा राशि / Payment Amount (Jama) *' : isContribution ? 'अंशदान राशि / Contribution Amount *' : isPersonal ? 'आय / प्राप्त राशि (Income Amount) *' : 'राशि / Amount *'}
               </label>
               <div style={{ position: 'relative' }}>
                 <span className="currency-symbol">₹</span>
@@ -283,7 +290,7 @@ export default function AddMoneyModal({
             </button>
             <button type="submit" className="btn btn-income">
               <IndianRupee size={16} />
-              {editData ? 'अपडेट करें / Update' : isDukandar ? 'जमा राशि जोड़ें / Save Payment' : isContribution ? 'अंशदान जोड़ें / Save' : 'जोड़ें / Save'}
+              {editData ? 'अपडेट करें / Update' : isDukandar ? 'जमा राशि जोड़ें / Save Payment' : isContribution ? 'अंशदान जोड़ें / Save' : isPersonal ? 'आय जोड़ें / Save Income' : 'जोड़ें / Save'}
             </button>
           </div>
         </form>

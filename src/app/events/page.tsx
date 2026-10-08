@@ -19,7 +19,7 @@ export default function EventsPage() {
   const [mounted, setMounted] = useState(false);
   const [events, setEvents] = useState<HisabEvent[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filter, setFilter] = useState<'all' | 'contribution' | 'len_den' | 'dukandar_diary' | 'archived'>('all');
+  const [filter, setFilter] = useState<'all' | 'personal_expense' | 'contribution' | 'len_den' | 'dukandar_diary' | 'archived'>('all');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [changeTypeTarget, setChangeTypeTarget] = useState<HisabEvent | null>(null);
@@ -45,6 +45,7 @@ export default function EventsPage() {
     if (e.isArchived) return false;
 
     if (filter === 'all') return true;
+    if (filter === 'personal_expense') return e.eventType === 'personal_expense';
     if (filter === 'contribution') return e.eventType === 'contribution';
     if (filter === 'dukandar_diary') return e.eventType === 'dukandar_diary';
     if (filter === 'len_den') return !e.eventType || e.eventType === 'len_den';
@@ -80,7 +81,7 @@ export default function EventsPage() {
         <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
           <div>
             <h1 className="page-title">📅 इवेंट व खाते / Events & Diaries</h1>
-            <p className="page-subtitle">कंट्रीब्यूशन, सामान्य लेन-देन और दुकानदार डायरी का पूरा हिसाब</p>
+            <p className="page-subtitle">पर्सनल खर्च, कंट्रीब्यूशन, सामान्य लेन-देन और दुकानदार डायरी का पूरा हिसाब</p>
           </div>
           <Link href="/events/new" className="btn btn-primary">
             <Plus size={18} />
@@ -104,6 +105,7 @@ export default function EventsPage() {
           <div className="tabs" style={{ flexWrap: 'wrap', gap: 4 }}>
             {[
               { key: 'all' as const, label: 'सभी / All' },
+              { key: 'personal_expense' as const, label: '👛 पर्सनल खर्च' },
               { key: 'contribution' as const, label: '💰 कंट्रीब्यूशन' },
               { key: 'len_den' as const, label: '🔄 लेन-देन' },
               { key: 'dukandar_diary' as const, label: '📖 दुकानदार डायरी' },
@@ -294,7 +296,7 @@ export default function EventsPage() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
                       <div style={{ textAlign: 'center', padding: '10px 4px', background: 'var(--income-bg)', borderRadius: 8 }}>
                         <p style={{ fontSize: 11, color: 'var(--income-color)', fontWeight: 600 }}>
-                          {event.eventType === 'dukandar_diary' ? 'जमा मिला' : event.eventType === 'contribution' ? 'अंशदान' : 'आय / In'}
+                          {event.eventType === 'dukandar_diary' ? 'जमा मिला' : event.eventType === 'contribution' ? 'अंशदान' : event.eventType === 'personal_expense' ? 'आय / मिला' : 'आय / In'}
                         </p>
                         <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--income-color)', marginTop: 2 }}>
                           {formatCurrency(summary.totalReceived)}
@@ -302,7 +304,7 @@ export default function EventsPage() {
                       </div>
                       <div style={{ textAlign: 'center', padding: '10px 4px', background: 'var(--expense-bg)', borderRadius: 8 }}>
                         <p style={{ fontSize: 11, color: 'var(--expense-color)', fontWeight: 600 }}>
-                          {event.eventType === 'dukandar_diary' ? 'सामान उधारी' : event.eventType === 'contribution' ? 'समूह खर्च' : 'खर्च / Out'}
+                          {event.eventType === 'dukandar_diary' ? 'सामान उधारी' : event.eventType === 'contribution' ? 'समूह खर्च' : event.eventType === 'personal_expense' ? 'दैनिक खर्च' : 'खर्च / Out'}
                         </p>
                         <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--expense-color)', marginTop: 2 }}>
                           {formatCurrency(summary.totalSpent)}
@@ -310,7 +312,7 @@ export default function EventsPage() {
                       </div>
                       <div style={{ textAlign: 'center', padding: '10px 4px', background: 'var(--brand-primary-light)', borderRadius: 8 }}>
                         <p style={{ fontSize: 11, color: 'var(--brand-primary)', fontWeight: 600 }}>
-                          {event.eventType === 'dukandar_diary' ? 'नेट बाकी' : event.eventType === 'contribution' ? 'फंड बचत' : 'शेष / Bal'}
+                          {event.eventType === 'dukandar_diary' ? 'नेट बाकी' : event.eventType === 'contribution' ? 'फंड बचत' : event.eventType === 'personal_expense' ? 'बचत / Balance' : 'शेष / Bal'}
                         </p>
                         <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--brand-primary)', marginTop: 2 }}>
                           {formatCurrency(summary.balance)}
@@ -320,7 +322,7 @@ export default function EventsPage() {
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span className="badge badge-neutral">
-                        {summary.totalTransactions} {event.eventType === 'dukandar_diary' ? 'प्रविष्टियाँ' : 'transactions'}
+                        {summary.totalTransactions} {event.eventType === 'dukandar_diary' ? 'प्रविष्टियाँ' : event.eventType === 'personal_expense' ? 'खर्चे' : 'transactions'}
                       </span>
                       <span style={{ fontSize: 12, color: 'var(--brand-primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
                         खाता विवरण देखें →

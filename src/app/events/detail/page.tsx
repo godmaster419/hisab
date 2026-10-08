@@ -136,6 +136,7 @@ function EventDetailContent() {
   const typeConfig = getEventTypeConfig(event.eventType);
   const isDukandar = event.eventType === 'dukandar_diary';
   const isContribution = event.eventType === 'contribution';
+  const isPersonal = event.eventType === 'personal_expense';
 
   const handleOpenAddContributionForMember = (memberName: string, monthStr: string) => {
     setEditMoney(null);
@@ -242,10 +243,10 @@ function EventDetailContent() {
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button className="btn btn-income btn-sm" onClick={handleOpenGeneralAddMoney}>
-              <IndianRupee size={15} /> {isDukandar ? '+ जमा मिला (Payment)' : isContribution ? '+ अंशदान मिला' : '+ पैसा जोड़ें'}
+              <IndianRupee size={15} /> {isDukandar ? '+ जमा मिला (Payment)' : isContribution ? '+ अंशदान मिला' : isPersonal ? '+ आय / पैसे मिले' : '+ पैसा जोड़ें'}
             </button>
             <button className="btn btn-expense btn-sm" onClick={() => { setEditExpense(null); setShowAddExpense(true); }}>
-              <ShoppingCart size={15} /> {isDukandar ? '+ सामान दिया (उधारी)' : isContribution ? '+ समूह खर्च' : '+ खर्च जोड़ें'}
+              <ShoppingCart size={15} /> {isDukandar ? '+ सामान दिया (उधारी)' : isContribution ? '+ समूह खर्च' : isPersonal ? '+ दैनिक खर्च जोड़ें' : '+ खर्च जोड़ें'}
             </button>
             <button
               className="btn btn-secondary btn-sm"
@@ -281,28 +282,28 @@ function EventDetailContent() {
           {summary.openingBalance > 0 && (
             <div className="card summary-card events">
               <p style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 500, marginBottom: 4 }}>
-                शुरुआती राशि / Opening
+                {isPersonal ? 'शुरुआती बचत / Opening Balance' : 'शुरुआती राशि / Opening'}
               </p>
               <p style={{ fontSize: 24, fontWeight: 700 }}>{formatCurrency(summary.openingBalance)}</p>
             </div>
           )}
           <div className="card summary-card income">
             <p style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 500, marginBottom: 4 }}>
-              {isDukandar ? 'कुल जमा राशि मिली / Total Jama' : isContribution ? 'कुल अंशदान मिला / Total Contribution' : 'कुल आय / Total Received'}
+              {isDukandar ? 'कुल जमा राशि मिली / Total Jama' : isContribution ? 'कुल अंशदान मिला / Total Contribution' : isPersonal ? 'कुल आय / प्राप्त राशि (Income)' : 'कुल आय / Total Received'}
             </p>
             <p style={{ fontSize: 24, fontWeight: 700, color: 'var(--income-color)' }}>{formatCurrency(summary.totalReceived)}</p>
             <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>{summary.incomeCount} entries</p>
           </div>
           <div className="card summary-card expense">
             <p style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 500, marginBottom: 4 }}>
-              {isDukandar ? 'कुल सामान दिया / Goods Given (उधारी)' : isContribution ? 'कुल समूह खर्च / Total Expenses' : 'कुल खर्च / Total Spent'}
+              {isDukandar ? 'कुल सामान दिया / Goods Given (उधारी)' : isContribution ? 'कुल समूह खर्च / Total Expenses' : isPersonal ? 'कुल दैनिक खर्च / Daily Expenses' : 'कुल खर्च / Total Spent'}
             </p>
             <p style={{ fontSize: 24, fontWeight: 700, color: 'var(--expense-color)' }}>{formatCurrency(summary.totalSpent)}</p>
             <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>{summary.expenseCount} entries</p>
           </div>
           <div className="card summary-card balance">
             <p style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 500, marginBottom: 4 }}>
-              {isDukandar ? 'नेट खाता बाकी / Net Balance' : isContribution ? 'बचा हुआ फंड / Fund Balance' : 'शेष राशि / Balance'}
+              {isDukandar ? 'नेट खाता बाकी / Net Balance' : isContribution ? 'बचा हुआ फंड / Fund Balance' : isPersonal ? 'बची हुई बचत / Net Savings' : 'शेष राशि / Balance'}
             </p>
             <p style={{
               fontSize: 24, fontWeight: 700,
@@ -319,6 +320,8 @@ function EventDetailContent() {
             <AlertTriangle size={18} />
             {isDukandar
               ? 'ध्यान दें: कुल ग्राहक उधारी (सामान) प्राप्त जमा से अधिक है! / Total goods given on credit exceeds total payments received!'
+              : isPersonal
+              ? 'चेतावनी: कुल दैनिक खर्च आपकी उपलब्ध आय/बचत से अधिक हो गया है! / Warning: Daily expenses exceed available funds!'
               : 'ध्यान दें: खर्च उपलब्ध राशि से अधिक है! / Warning: Expenses exceed available balance!'}
           </div>
         )}
@@ -329,16 +332,16 @@ function EventDetailContent() {
             { key: 'overview', label: '📊 सारांश' },
             {
               key: 'income',
-              label: isDukandar ? '💰 जमा मिला (Payment)' : isContribution ? '💰 अंशदान (Contribution)' : '💰 आय (Income)',
+              label: isDukandar ? '💰 जमा मिला (Payment)' : isContribution ? '💰 अंशदान (Contribution)' : isPersonal ? '💰 आय / पॉकेट मनी' : '💰 आय (Income)',
             },
             {
               key: 'expenses',
-              label: isDukandar ? '🛒 सामान दिया (उधारी)' : isContribution ? '🧾 समूह खर्च' : '🧾 खर्च (Expenses)',
+              label: isDukandar ? '🛒 सामान दिया (उधारी)' : isContribution ? '🧾 समूह खर्च' : isPersonal ? '🛒 दैनिक खर्च (Daily Expenses)' : '🧾 खर्च (Expenses)',
             },
             { key: 'history', label: '🔄 इतिहास' },
             {
               key: 'people',
-              label: isDukandar ? '👥 ग्राहक खाता बही (Customers)' : isContribution ? '👥 सदस्य सूची (Members)' : '👥 लोग (People)',
+              label: isDukandar ? '👥 ग्राहक खाता बही (Customers)' : isContribution ? '👥 सदस्य सूची (Members)' : isPersonal ? '👥 आय स्रोत व दुकानदार' : '👥 लोग (People)',
             },
             { key: 'categories', label: '📈 श्रेणी' },
           ].map((tab) => (
@@ -456,10 +459,10 @@ function EventDetailContent() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h3 style={{ fontSize: 16, fontWeight: 600 }}>
-                {isDukandar ? '💰 ग्राहक से जमा मिली राशि / Customer Payments (Jama)' : isContribution ? '💰 सदस्य अंशदान / Member Contributions' : '💰 पैसा प्राप्त / Money Received'}
+                {isDukandar ? '💰 ग्राहक से जमा मिली राशि / Customer Payments (Jama)' : isContribution ? '💰 सदस्य अंशदान / Member Contributions' : isPersonal ? '💰 आय / पॉकेट मनी प्राप्ति (Income / Money In)' : '💰 पैसा प्राप्त / Money Received'}
               </h3>
               <button className="btn btn-income btn-sm" onClick={() => { setEditMoney(null); setShowAddMoney(true); }}>
-                <Plus size={15} /> {isDukandar ? 'जमा जोड़ें' : isContribution ? 'अंशदान जोड़ें' : 'पैसा जोड़ें'}
+                <Plus size={15} /> {isDukandar ? 'जमा जोड़ें' : isContribution ? 'अंशदान जोड़ें' : isPersonal ? 'आय जोड़ें' : 'पैसा जोड़ें'}
               </button>
             </div>
 
@@ -468,13 +471,13 @@ function EventDetailContent() {
                 <div className="empty-state">
                   <div className="empty-state-icon"><IndianRupee size={32} /></div>
                   <h3 className="empty-state-title">
-                    {isDukandar ? 'अभी कोई जमा राशि दर्ज नहीं की गई है' : isContribution ? 'अभी कोई अंशदान दर्ज नहीं किया गया है' : 'अभी कोई पैसा दर्ज नहीं किया गया है'}
+                    {isDukandar ? 'अभी कोई जमा राशि दर्ज नहीं की गई है' : isContribution ? 'अभी कोई अंशदान दर्ज नहीं किया गया है' : isPersonal ? 'अभी कोई आय या पॉकेट मनी दर्ज नहीं है' : 'अभी कोई पैसा दर्ज नहीं किया गया है'}
                   </h3>
                   <p className="empty-state-text">
-                    {isDukandar ? 'ग्राहक द्वारा दी गई जमा राशि जोड़ने के लिए बटन दबाएँ' : isContribution ? 'सदस्यों का अंशदान जोड़ने के लिए ऊपर बटन दबाएँ' : 'पैसे का रिकॉर्ड जोड़ने के लिए ऊपर बटन दबाएँ'}
+                    {isDukandar ? 'ग्राहक द्वारा दी गई जमा राशि जोड़ने के लिए बटन दबाएँ' : isContribution ? 'सदस्यों का अंशदान जोड़ने के लिए ऊपर बटन दबाएँ' : isPersonal ? 'सैलरी, पॉकेट मनी या प्राप्त पैसे दर्ज करने के लिए ऊपर बटन दबाएँ' : 'पैसे का रिकॉर्ड जोड़ने के लिए ऊपर बटन दबाएँ'}
                   </p>
                   <button className="btn btn-income" onClick={() => setShowAddMoney(true)}>
-                    <Plus size={16} /> {isDukandar ? 'जमा जोड़ें' : isContribution ? 'अंशदान जोड़ें' : 'पैसा जोड़ें'}
+                    <Plus size={16} /> {isDukandar ? 'जमा जोड़ें' : isContribution ? 'अंशदान जोड़ें' : isPersonal ? 'आय जोड़ें' : 'पैसा जोड़ें'}
                   </button>
                 </div>
               </div>
@@ -486,9 +489,9 @@ function EventDetailContent() {
                     <thead>
                       <tr>
                         <th>तारीख / Date</th>
-                        <th>{isDukandar ? 'ग्राहक का नाम / Customer' : isContribution ? 'सदस्य का नाम / Member' : 'देने वाला / Given By'}</th>
+                        <th>{isDukandar ? 'ग्राहक का नाम / Customer' : isContribution ? 'सदस्य का नाम / Member' : isPersonal ? 'स्रोत / देने वाला (Source)' : 'देने वाला / Given By'}</th>
                         <th>{isDukandar ? 'जमा राशि / Amount' : 'राशि / Amount'}</th>
-                        <th>{isDukandar ? 'दुकानदार / Received By' : isContribution ? 'कोषाध्यक्ष / Received By' : 'जमा करने वाला / Deposited With'}</th>
+                        <th>{isDukandar ? 'दुकानदार / Received By' : isContribution ? 'कोषाध्यक्ष / Received By' : isPersonal ? 'खाता / किसके पास (In Hand/Bank)' : 'जमा करने वाला / Deposited With'}</th>
                         <th>{isDukandar ? 'विवरण / Purpose' : 'उद्देश्य / Purpose'}</th>
                         <th>Mode</th>
                         <th style={{ width: 80 }}>Actions</th>
@@ -557,10 +560,10 @@ function EventDetailContent() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h3 style={{ fontSize: 16, fontWeight: 600 }}>
-                {isDukandar ? '🛒 ग्राहक को सामान दिया / Goods Given (Udhar)' : isContribution ? '🧾 समूह खर्च / Group Expenses' : '🧾 खर्च / Expenses'}
+                {isDukandar ? '🛒 ग्राहक को सामान दिया / Goods Given (Udhar)' : isContribution ? '🧾 समूह खर्च / Group Expenses' : isPersonal ? '🛒 दैनिक खर्च रिकॉर्ड / Daily Expenses' : '🧾 खर्च / Expenses'}
               </h3>
               <button className="btn btn-expense btn-sm" onClick={() => { setEditExpense(null); setShowAddExpense(true); }}>
-                <Plus size={15} /> {isDukandar ? 'सामान/उधारी जोड़ें' : isContribution ? 'खर्च जोड़ें' : 'खर्च जोड़ें'}
+                <Plus size={15} /> {isDukandar ? 'सामान/उधारी जोड़ें' : isContribution ? 'खर्च जोड़ें' : isPersonal ? 'दैनिक खर्च जोड़ें' : 'खर्च जोड़ें'}
               </button>
             </div>
 
@@ -569,13 +572,13 @@ function EventDetailContent() {
                 <div className="empty-state">
                   <div className="empty-state-icon"><ShoppingCart size={32} /></div>
                   <h3 className="empty-state-title">
-                    {isDukandar ? 'अभी कोई सामान या उधारी दर्ज नहीं है' : isContribution ? 'अभी कोई खर्च दर्ज नहीं है' : 'अभी कोई खर्च दर्ज नहीं किया गया है'}
+                    {isDukandar ? 'अभी कोई सामान या उधारी दर्ज नहीं है' : isContribution ? 'अभी कोई खर्च दर्ज नहीं है' : isPersonal ? 'अभी कोई दैनिक खर्च दर्ज नहीं है' : 'अभी कोई खर्च दर्ज नहीं किया गया है'}
                   </h3>
                   <p className="empty-state-text">
-                    {isDukandar ? 'ग्राहक को दिए गए सामान का विवरण जोड़ने के लिए ऊपर बटन दबाएँ' : 'खर्च का रिकॉर्ड जोड़ने के लिए ऊपर बटन दबाएँ'}
+                    {isDukandar ? 'ग्राहक को दिए गए सामान का विवरण जोड़ने के लिए ऊपर बटन दबाएँ' : isPersonal ? 'आज का दैनिक खर्च (जैसे किराना, पेट्रोल, चाय-नाश्ता आदि) जोड़ने के लिए ऊपर बटन दबाएँ' : 'खर्च का रिकॉर्ड जोड़ने के लिए ऊपर बटन दबाएँ'}
                   </p>
                   <button className="btn btn-expense" onClick={() => setShowAddExpense(true)}>
-                    <Plus size={16} /> {isDukandar ? 'सामान/उधारी जोड़ें' : 'खर्च जोड़ें'}
+                    <Plus size={16} /> {isDukandar ? 'सामान/उधारी जोड़ें' : isPersonal ? 'दैनिक खर्च जोड़ें' : 'खर्च जोड़ें'}
                   </button>
                 </div>
               </div>
@@ -587,11 +590,11 @@ function EventDetailContent() {
                     <thead>
                       <tr>
                         <th>तारीख / Date</th>
-                        <th>{isDukandar ? 'दुकानदार / Given By' : 'खर्च करने वाला / Spent By'}</th>
-                        <th>{isDukandar ? 'ग्राहक (खाताधारक) / Customer' : 'प्राप्तकर्ता / Paid To'}</th>
+                        <th>{isDukandar ? 'दुकानदार / Given By' : isPersonal ? 'किसने खर्च किया / Spent By' : 'खर्च करने वाला / Spent By'}</th>
+                        <th>{isDukandar ? 'ग्राहक (खाताधारक) / Customer' : isPersonal ? 'दुकानदार / किसे दिया (Paid To)' : 'प्राप्तकर्ता / Paid To'}</th>
                         <th>{isDukandar ? 'सामान कीमत / Amount' : 'राशि / Amount'}</th>
                         <th>श्रेणी / Category</th>
-                        <th>{isDukandar ? 'सामान विवरण / Items' : 'उद्देश्य / Purpose'}</th>
+                        <th>{isDukandar ? 'सामान विवरण / Items' : isPersonal ? 'खर्च की मद / उद्देश्य (Purpose)' : 'उद्देश्य / Purpose'}</th>
                         <th style={{ width: 80 }}>Actions</th>
                       </tr>
                     </thead>
@@ -1081,10 +1084,10 @@ function EventDetailContent() {
                 <div className="empty-state">
                   <div className="empty-state-icon"><Users size={32} /></div>
                   <h3 className="empty-state-title">
-                    {isDukandar ? 'कोई ग्राहक खाता नहीं है' : 'कोई व्यक्ति नहीं है'}
+                    {isDukandar ? 'कोई ग्राहक खाता नहीं है' : isPersonal ? 'कोई व्यक्ति या दुकान दर्ज नहीं है' : 'कोई व्यक्ति नहीं है'}
                   </h3>
                   <p className="empty-state-text">
-                    {isDukandar ? 'सामान देने या जमा राशि दर्ज करने पर ग्राहकों का हिसाब यहाँ दिखेगा' : 'लेनदेन जोड़ने पर लोगों की जानकारी यहाँ दिखेगी'}
+                    {isDukandar ? 'सामान देने या जमा राशि दर्ज करने पर ग्राहकों का हिसाब यहाँ दिखेगा' : isPersonal ? 'दैनिक खर्च या आय जोड़ने पर लोगों और दुकानों का हिसाब यहाँ दिखेगा' : 'लेनदेन जोड़ने पर लोगों की जानकारी यहाँ दिखेगी'}
                   </p>
                 </div>
               </div>
@@ -1106,7 +1109,7 @@ function EventDetailContent() {
                         <div>
                           <h4 style={{ fontSize: 15, fontWeight: 600 }}>{p.name}</h4>
                           <p style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                            {p.transactionCount} {isDukandar ? 'प्रविष्टियाँ' : 'transactions'}
+                            {p.transactionCount} {isDukandar ? 'प्रविष्टियाँ' : isPersonal ? 'खर्चे' : 'transactions'}
                           </p>
                         </div>
                       </div>
@@ -1145,15 +1148,15 @@ function EventDetailContent() {
                       ) : (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
                           <div style={{ textAlign: 'center', padding: 8, background: 'var(--income-bg)', borderRadius: 8 }}>
-                            <p style={{ fontSize: 10, color: 'var(--income-color)', fontWeight: 500 }}>दिया / Given</p>
+                            <p style={{ fontSize: 10, color: 'var(--income-color)', fontWeight: 500 }}>{isPersonal ? 'आय मिली (Income)' : 'दिया / Given'}</p>
                             <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--income-color)' }}>{formatCurrency(p.moneyGiven)}</p>
                           </div>
                           <div style={{ textAlign: 'center', padding: 8, background: 'var(--brand-primary-light)', borderRadius: 8 }}>
-                            <p style={{ fontSize: 10, color: 'var(--brand-primary)', fontWeight: 500 }}>मिला / Got</p>
+                            <p style={{ fontSize: 10, color: 'var(--brand-primary)', fontWeight: 500 }}>{isPersonal ? 'प्राप्त (Got)' : 'मिला / Got'}</p>
                             <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand-primary)' }}>{formatCurrency(p.moneyReceived)}</p>
                           </div>
                           <div style={{ textAlign: 'center', padding: 8, background: 'var(--expense-bg)', borderRadius: 8 }}>
-                            <p style={{ fontSize: 10, color: 'var(--expense-color)', fontWeight: 500 }}>खर्च / Spent</p>
+                            <p style={{ fontSize: 10, color: 'var(--expense-color)', fontWeight: 500 }}>{isPersonal ? 'खर्च (Spent)' : 'खर्च / Spent'}</p>
                             <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--expense-color)' }}>{formatCurrency(p.moneySpent)}</p>
                           </div>
                         </div>

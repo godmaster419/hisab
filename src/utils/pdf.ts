@@ -839,6 +839,7 @@ export function generateEventReportHTML(
   // Contribution Members Logic (Month-wise)
   // ============================================
   const isContribution = event.eventType === 'contribution';
+  const isPersonal = event.eventType === 'personal_expense';
   const registeredPeople = getPeople();
   const allContributionMonths = getContributionMonths(event, moneyReceived, expenses);
   const currentMonthStr = getCurrentMonthStr();
@@ -1369,19 +1370,19 @@ export function generateEventReportHTML(
     <!-- Summary KPI Cards -->
     <div class="summary-grid">
       <div class="summary-card opening">
-        <div class="summary-label">${isContribution ? 'शुरुआती फंड / Opening Fund' : 'शुरुआती राशि / Opening'}</div>
+        <div class="summary-label">${isContribution ? 'शुरुआती फंड / Opening Fund' : isPersonal ? 'शुरुआती बचत / Opening Balance' : 'शुरुआती राशि / Opening'}</div>
         <div class="summary-value">${formatPDFCurrency(summary.openingBalance)}</div>
       </div>
       <div class="summary-card received">
-        <div class="summary-label">${isContribution ? 'कुल अंशदान प्राप्त / Total Contribution' : 'कुल प्राप्त राशि / Received'}</div>
+        <div class="summary-label">${isContribution ? 'कुल अंशदान प्राप्त / Total Contribution' : isPersonal ? 'कुल आय / प्राप्त राशि (Total Income)' : 'कुल प्राप्त राशि / Received'}</div>
         <div class="summary-value">${formatPDFCurrency(summary.totalReceived)}</div>
       </div>
       <div class="summary-card spent">
-        <div class="summary-label">${isContribution ? 'कुल समूह खर्च / Group Expenses' : 'कुल खर्च / Spent'}</div>
+        <div class="summary-label">${isContribution ? 'कुल समूह खर्च / Group Expenses' : isPersonal ? 'कुल दैनिक खर्च / Daily Expenses' : 'कुल खर्च / Spent'}</div>
         <div class="summary-value">${formatPDFCurrency(summary.totalSpent)}</div>
       </div>
       <div class="summary-card balance">
-        <div class="summary-label">${isContribution ? 'बचा हुआ फंड / Net Fund Balance' : 'शेष राशि / Net Balance'}</div>
+        <div class="summary-label">${isContribution ? 'बचा हुआ फंड / Net Fund Balance' : isPersonal ? 'बची हुई बचत / Net Savings' : 'शेष राशि / Net Balance'}</div>
         <div class="summary-value">${formatPDFCurrency(summary.balance)}</div>
       </div>
     </div>
@@ -1390,6 +1391,8 @@ export function generateEventReportHTML(
     <div class="formula-strip">
       ${isContribution
         ? `अंशदान हिसाब: शुरुआती फंड (${formatPDFCurrency(summary.openingBalance)}) + कुल अंशदान (${formatPDFCurrency(summary.totalReceived)}) − कुल समूह खर्च (${formatPDFCurrency(summary.totalSpent)}) = <strong>बचा हुआ फंड ${formatPDFCurrency(summary.balance)}</strong>`
+        : isPersonal
+        ? `दैनिक खर्च हिसाब: शुरुआती बचत (${formatPDFCurrency(summary.openingBalance)}) + कुल आय (${formatPDFCurrency(summary.totalReceived)}) − कुल दैनिक खर्च (${formatPDFCurrency(summary.totalSpent)}) = <strong>शुद्ध बचत ${formatPDFCurrency(summary.balance)}</strong>`
         : `हिसाब समीकरण: शुरुआती राशि (${formatPDFCurrency(summary.openingBalance)}) + कुल प्राप्त (${formatPDFCurrency(summary.totalReceived)}) − कुल खर्च (${formatPDFCurrency(summary.totalSpent)}) = <strong>शुद्ध शेष राशि ${formatPDFCurrency(summary.balance)}</strong>`
       }
     </div>
@@ -1427,7 +1430,7 @@ export function generateEventReportHTML(
 
     <!-- Money Received Ledger -->
     <div class="section-title">
-      <span>${isContribution ? '📥 सदस्य अंशदान बही / Member Contribution Ledger' : '📥 पैसा प्राप्ति बही / Money Received Ledger'}</span>
+      <span>${isContribution ? '📥 सदस्य अंशदान बही / Member Contribution Ledger' : isPersonal ? '📥 आय एवं प्राप्ति बही / Income Ledger' : '📥 पैसा प्राप्ति बही / Money Received Ledger'}</span>
       <span class="count-badge">${moneyReceived.length} प्रविष्टियां</span>
     </div>
     ${moneyReceived.length > 0 ? `
@@ -1436,11 +1439,11 @@ export function generateEventReportHTML(
           <tr>
             <th style="width: 35px; text-align: center;">क्र.</th>
             <th style="width: 85px;">तारीख</th>
-            <th>${isContribution ? 'सदस्य का नाम (Member Name)' : 'देने वाले का नाम'}</th>
-            <th style="width: 100px; text-align: right;">${isContribution ? 'अंशदान राशि (₹)' : 'राशि (₹)'}</th>
+            <th>${isContribution ? 'सदस्य का नाम (Member Name)' : isPersonal ? 'स्रोत / देने वाला (Source)' : 'देने वाले का नाम'}</th>
+            <th style="width: 100px; text-align: right;">${isContribution ? 'अंशदान राशि (₹)' : isPersonal ? 'आय राशि (₹)' : 'राशि (₹)'}</th>
             <th style="width: 75px;">माध्यम</th>
             <th>${isContribution ? 'माह / उद्देश्य / विवरण' : 'विवरण / उद्देश्य'}</th>
-            <th style="width: 100px;">${isContribution ? 'कोषाध्यक्ष / प्राप्तकर्ता' : 'प्राप्तकर्ता'}</th>
+            <th style="width: 100px;">${isContribution ? 'कोषाध्यक्ष / प्राप्तकर्ता' : isPersonal ? 'खाता / प्राप्तकर्ता' : 'प्राप्तकर्ता'}</th>
           </tr>
         </thead>
         <tbody>
@@ -1448,7 +1451,7 @@ export function generateEventReportHTML(
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="3" style="text-align: right;">${isContribution ? 'कुल अंशदान जमा / Total Contribution:' : 'कुल प्राप्त राशि / Total Received:'}</td>
+            <td colspan="3" style="text-align: right;">${isContribution ? 'कुल अंशदान जमा / Total Contribution:' : isPersonal ? 'कुल आय / Total Income:' : 'कुल प्राप्त राशि / Total Received:'}</td>
             <td style="text-align: right; color: #059669;">${formatPDFCurrency(summary.totalReceived)}</td>
             <td colspan="3"></td>
           </tr>
@@ -1458,7 +1461,7 @@ export function generateEventReportHTML(
 
     <!-- Expense Ledger -->
     <div class="section-title">
-      <span>${isContribution ? '🧾 समूह खर्च बही / Group Expense Ledger' : '📤 खर्च बही / Expense Ledger'}</span>
+      <span>${isContribution ? '🧾 समूह खर्च बही / Group Expense Ledger' : isPersonal ? '🛒 दैनिक खर्च बही / Daily Expense Ledger' : '📤 खर्च बही / Expense Ledger'}</span>
       <span class="count-badge">${expenses.length} प्रविष्टियां</span>
     </div>
     ${expenses.length > 0 ? `
@@ -1599,8 +1602,8 @@ export function generateEventReportHTML(
         ` : `
           <div class="sig-line"></div>
         `}
-        <div class="sig-label">${isContribution ? 'कोषाध्यक्ष / जिम्मेदार सदस्य' : 'जिम्मेदार व्यक्ति के हस्ताक्षर'}</div>
-        <div class="sig-sub">${escapeHtml(event.responsiblePerson || (isContribution ? 'कोषाध्यक्ष' : 'हस्ताक्षर'))}</div>
+        <div class="sig-label">${isContribution ? 'कोषाध्यक्ष / जिम्मेदार सदस्य' : isPersonal ? 'खाताधारक / मेरा हस्ताक्षर' : 'जिम्मेदार व्यक्ति के हस्ताक्षर'}</div>
+        <div class="sig-sub">${escapeHtml(event.responsiblePerson || (isContribution ? 'कोषाध्यक्ष' : isPersonal ? 'खाताधारक' : 'हस्ताक्षर'))}</div>
       </div>
       <div class="sig-box">
         ${presidentSig ? `
@@ -1611,8 +1614,8 @@ export function generateEventReportHTML(
         ` : `
           <div class="sig-line"></div>
         `}
-        <div class="sig-label">${isContribution ? 'अध्यक्ष / सचिव के हस्ताक्षर' : 'हिसाब जांचकर्ता / कोषाध्यक्ष'}</div>
-        <div class="sig-sub">${escapeHtml(presidentName || 'हस्ताक्षर व मुहर')}</div>
+        <div class="sig-label">${isContribution ? 'अध्यक्ष / सचिव के हस्ताक्षर' : isPersonal ? 'अभिभावक / परीक्षक के हस्ताक्षर (वैकल्पिक)' : 'हिसाब जांचकर्ता / कोषाध्यक्ष'}</div>
+        <div class="sig-sub">${escapeHtml(presidentName || (isPersonal ? 'परीक्षक / परिवार' : 'हस्ताक्षर व मुहर'))}</div>
       </div>
     </div>
 

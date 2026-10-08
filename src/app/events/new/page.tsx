@@ -162,6 +162,8 @@ export default function NewEventPage() {
                   ? 'दुकान / खाते का नाम / Shop or Diary Name *'
                   : form.eventType === 'contribution'
                   ? 'समिति / फंड का नाम / Committee or Fund Name *'
+                  : form.eventType === 'personal_expense'
+                  ? 'पर्सनल डायरी / खाते का नाम (Personal Expense Book) *'
                   : 'Event का नाम / Event Name *'}
               </label>
               <input
@@ -172,6 +174,8 @@ export default function NewEventPage() {
                     ? 'जैसे: रमेश किराना स्टोर - ग्राहक डायरी'
                     : form.eventType === 'contribution'
                     ? 'जैसे: समाज सेवा कल्याण समिति 2026'
+                    : form.eventType === 'personal_expense'
+                    ? 'जैसे: मेरा दैनिक खर्च 2026 / My Daily Expenses'
                     : 'जैसे: Annual Function 2026'
                 }
                 value={form.name}
@@ -230,6 +234,8 @@ export default function NewEventPage() {
                       ? 'जैसे: रमेश किराना स्टोर / संचालक'
                       : form.eventType === 'contribution'
                       ? 'जैसे: अमित सिंह (कोषाध्यक्ष)'
+                      : form.eventType === 'personal_expense'
+                      ? 'जैसे: स्वयं (सूरज पटेल / मेरा नाम)'
                       : 'जैसे: Rajesh Kumar'
                   }
                   value={form.responsiblePerson}
@@ -244,6 +250,8 @@ export default function NewEventPage() {
                     ? 'प्रारंभिक उधारी / पुराना बकाया (₹)'
                     : form.eventType === 'contribution'
                     ? 'शुरुआती फंड राशि / Opening Fund (₹)'
+                    : form.eventType === 'personal_expense'
+                    ? 'शुरुआती बचत / पॉकेट मनी बैलेंस (₹)'
                     : 'शुरुआती राशि / Opening Balance (₹)'}
                 </label>
                 <div style={{ position: 'relative' }}>
@@ -285,22 +293,22 @@ export default function NewEventPage() {
               <div className="grid-2">
                 <div>
                   <SignatureUpload
-                    label={form.eventType === 'contribution' ? 'कोषाध्यक्ष / जिम्मेदार सदस्य' : 'कोषाध्यक्ष / जिम्मेदार व्यक्ति'}
+                    label={form.eventType === 'contribution' ? 'कोषाध्यक्ष / जिम्मेदार सदस्य' : form.eventType === 'personal_expense' ? 'खाताधारक / मेरा हस्ताक्षर' : 'कोषाध्यक्ष / जिम्मेदार व्यक्ति'}
                     subLabel="पारदर्शी (Transparent) PNG हस्ताक्षर अपलोड करें"
                     value={form.treasurerSignature}
                     onChange={(val) => setForm({ ...form, treasurerSignature: val })}
                     onClear={() => setForm({ ...form, treasurerSignature: '' })}
-                    placeholderText="कोषाध्यक्ष का PNG हस्ताक्षर अपलोड करें"
+                    placeholderText={form.eventType === 'personal_expense' ? 'खाताधारक का हस्ताक्षर अपलोड करें' : 'कोषाध्यक्ष का PNG हस्ताक्षर अपलोड करें'}
                   />
                 </div>
                 <div>
                   <SignatureUpload
-                    label={form.eventType === 'contribution' ? 'अध्यक्ष / सचिव का हस्ताक्षर' : 'हिसाब जांचकर्ता / अध्यक्ष का हस्ताक्षर'}
+                    label={form.eventType === 'contribution' ? 'अध्यक्ष / सचिव का हस्ताक्षर' : form.eventType === 'personal_expense' ? 'परिवार / अभिभावक का हस्ताक्षर (वैकल्पिक)' : 'हिसाब जांचकर्ता / अध्यक्ष का हस्ताक्षर'}
                     subLabel="पारदर्शी (Transparent) PNG हस्ताक्षर अपलोड करें"
                     value={form.presidentSignature}
                     onChange={(val) => setForm({ ...form, presidentSignature: val })}
                     onClear={() => setForm({ ...form, presidentSignature: '' })}
-                    placeholderText="अध्यक्ष / सचिव का PNG हस्ताक्षर अपलोड करें"
+                    placeholderText="अध्यक्ष / अभिभावक का PNG हस्ताक्षर अपलोड करें"
                   />
                   <div className="form-group" style={{ marginTop: 8 }}>
                     <label className="form-label" style={{ fontSize: 12, marginBottom: 4 }}>
