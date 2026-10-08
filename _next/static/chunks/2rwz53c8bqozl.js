@@ -41,7 +41,7 @@
         <td style="text-align: right; color: #dc2626; font-weight: 600;">${(0,oQ.formatPDFCurrency)(A.moneySpent)}</td>
         <td style="text-align: right; font-weight: 700; color: ${i};">${g}</td>
       </tr>
-    `}).join(""),D="contribution"===A.eventType,Y=(0,oo.getPeople)(),F=(0,oQ.getContributionMonths)(A,t,B),l=(0,oQ.getCurrentMonthStr)(),u=(0,oQ.getMonthContributionMembers)(t,l,Y),N=(0,oQ.getPreviousMonthsUnpaid)(F,l,t,Y),d=u.reduce((A,t)=>A+t.totalContributed,0),U=u.filter(A=>A.hasContributed).length,f=u.filter(A=>!A.hasContributed).length,y=u.map((A,t)=>{let B=A.hasContributed?`${A.paymentDates.join(", ")} (${A.paymentMethods.join(", ")})`:"— (इस माह का अंशदान बाकी)";return`
+    `}).join(""),D="contribution"===A.eventType,Y="personal_expense"===A.eventType,F=(0,oo.getPeople)(),l=(0,oQ.getContributionMonths)(A,t,B),u=(0,oQ.getCurrentMonthStr)(),N=(0,oQ.getMonthContributionMembers)(t,u,F),d=(0,oQ.getPreviousMonthsUnpaid)(l,u,t,F),U=N.reduce((A,t)=>A+t.totalContributed,0),f=N.filter(A=>A.hasContributed).length,y=N.filter(A=>!A.hasContributed).length,m=N.map((A,t)=>{let B=A.hasContributed?`${A.paymentDates.join(", ")} (${A.paymentMethods.join(", ")})`:"— (इस माह का अंशदान बाकी)";return`
       <tr>
         <td style="text-align: center; color: #64748b;">${t+1}</td>
         <td>
@@ -70,7 +70,7 @@
           `}
         </td>
       </tr>
-    `}).join(""),m=N.map((A,t)=>`
+    `}).join(""),R=d.map((A,t)=>`
     <tr>
       <td style="text-align: center; color: #64748b;">${t+1}</td>
       <td>
@@ -89,7 +89,7 @@
         </div>
       </td>
     </tr>
-  `).join(""),R=`HISAB_${oa(A.name)}_Report`;return`<!DOCTYPE html>
+  `).join(""),p=`HISAB_${oa(A.name)}_Report`;return`<!DOCTYPE html>
 <html lang="hi">
 <head>
   <meta charset="UTF-8">
@@ -545,26 +545,26 @@
     <!-- Summary KPI Cards -->
     <div class="summary-grid">
       <div class="summary-card opening">
-        <div class="summary-label">${D?"शुरुआती फंड / Opening Fund":"शुरुआती राशि / Opening"}</div>
+        <div class="summary-label">${D?"शुरुआती फंड / Opening Fund":Y?"शुरुआती बचत / Opening Balance":"शुरुआती राशि / Opening"}</div>
         <div class="summary-value">${(0,oQ.formatPDFCurrency)(i.openingBalance)}</div>
       </div>
       <div class="summary-card received">
-        <div class="summary-label">${D?"कुल अंशदान प्राप्त / Total Contribution":"कुल प्राप्त राशि / Received"}</div>
+        <div class="summary-label">${D?"कुल अंशदान प्राप्त / Total Contribution":Y?"कुल आय / प्राप्त राशि (Total Income)":"कुल प्राप्त राशि / Received"}</div>
         <div class="summary-value">${(0,oQ.formatPDFCurrency)(i.totalReceived)}</div>
       </div>
       <div class="summary-card spent">
-        <div class="summary-label">${D?"कुल समूह खर्च / Group Expenses":"कुल खर्च / Spent"}</div>
+        <div class="summary-label">${D?"कुल समूह खर्च / Group Expenses":Y?"कुल दैनिक खर्च / Daily Expenses":"कुल खर्च / Spent"}</div>
         <div class="summary-value">${(0,oQ.formatPDFCurrency)(i.totalSpent)}</div>
       </div>
       <div class="summary-card balance">
-        <div class="summary-label">${D?"बचा हुआ फंड / Net Fund Balance":"शेष राशि / Net Balance"}</div>
+        <div class="summary-label">${D?"बचा हुआ फंड / Net Fund Balance":Y?"बची हुई बचत / Net Savings":"शेष राशि / Net Balance"}</div>
         <div class="summary-value">${(0,oQ.formatPDFCurrency)(i.balance)}</div>
       </div>
     </div>
 
     <!-- Formula Strip -->
     <div class="formula-strip">
-      ${D?`अंशदान हिसाब: शुरुआती फंड (${(0,oQ.formatPDFCurrency)(i.openingBalance)}) + कुल अंशदान (${(0,oQ.formatPDFCurrency)(i.totalReceived)}) − कुल समूह खर्च (${(0,oQ.formatPDFCurrency)(i.totalSpent)}) = <strong>बचा हुआ फंड ${(0,oQ.formatPDFCurrency)(i.balance)}</strong>`:`हिसाब समीकरण: शुरुआती राशि (${(0,oQ.formatPDFCurrency)(i.openingBalance)}) + कुल प्राप्त (${(0,oQ.formatPDFCurrency)(i.totalReceived)}) − कुल खर्च (${(0,oQ.formatPDFCurrency)(i.totalSpent)}) = <strong>शुद्ध शेष राशि ${(0,oQ.formatPDFCurrency)(i.balance)}</strong>`}
+      ${D?`अंशदान हिसाब: शुरुआती फंड (${(0,oQ.formatPDFCurrency)(i.openingBalance)}) + कुल अंशदान (${(0,oQ.formatPDFCurrency)(i.totalReceived)}) − कुल समूह खर्च (${(0,oQ.formatPDFCurrency)(i.totalSpent)}) = <strong>बचा हुआ फंड ${(0,oQ.formatPDFCurrency)(i.balance)}</strong>`:Y?`दैनिक खर्च हिसाब: शुरुआती बचत (${(0,oQ.formatPDFCurrency)(i.openingBalance)}) + कुल आय (${(0,oQ.formatPDFCurrency)(i.totalReceived)}) − कुल दैनिक खर्च (${(0,oQ.formatPDFCurrency)(i.totalSpent)}) = <strong>शुद्ध बचत ${(0,oQ.formatPDFCurrency)(i.balance)}</strong>`:`हिसाब समीकरण: शुरुआती राशि (${(0,oQ.formatPDFCurrency)(i.openingBalance)}) + कुल प्राप्त (${(0,oQ.formatPDFCurrency)(i.totalReceived)}) − कुल खर्च (${(0,oQ.formatPDFCurrency)(i.totalSpent)}) = <strong>शुद्ध शेष राशि ${(0,oQ.formatPDFCurrency)(i.balance)}</strong>`}
     </div>
 
     <!-- Category Breakdown Table -->
@@ -600,7 +600,7 @@
 
     <!-- Money Received Ledger -->
     <div class="section-title">
-      <span>${D?"📥 सदस्य अंशदान बही / Member Contribution Ledger":"📥 पैसा प्राप्ति बही / Money Received Ledger"}</span>
+      <span>${D?"📥 सदस्य अंशदान बही / Member Contribution Ledger":Y?"📥 आय एवं प्राप्ति बही / Income Ledger":"📥 पैसा प्राप्ति बही / Money Received Ledger"}</span>
       <span class="count-badge">${t.length} प्रविष्टियां</span>
     </div>
     ${t.length>0?`
@@ -609,11 +609,11 @@
           <tr>
             <th style="width: 35px; text-align: center;">क्र.</th>
             <th style="width: 85px;">तारीख</th>
-            <th>${D?"सदस्य का नाम (Member Name)":"देने वाले का नाम"}</th>
-            <th style="width: 100px; text-align: right;">${D?"अंशदान राशि (₹)":"राशि (₹)"}</th>
+            <th>${D?"सदस्य का नाम (Member Name)":Y?"स्रोत / देने वाला (Source)":"देने वाले का नाम"}</th>
+            <th style="width: 100px; text-align: right;">${D?"अंशदान राशि (₹)":Y?"आय राशि (₹)":"राशि (₹)"}</th>
             <th style="width: 75px;">माध्यम</th>
             <th>${D?"माह / उद्देश्य / विवरण":"विवरण / उद्देश्य"}</th>
-            <th style="width: 100px;">${D?"कोषाध्यक्ष / प्राप्तकर्ता":"प्राप्तकर्ता"}</th>
+            <th style="width: 100px;">${D?"कोषाध्यक्ष / प्राप्तकर्ता":Y?"खाता / प्राप्तकर्ता":"प्राप्तकर्ता"}</th>
           </tr>
         </thead>
         <tbody>
@@ -621,7 +621,7 @@
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="3" style="text-align: right;">${D?"कुल अंशदान जमा / Total Contribution:":"कुल प्राप्त राशि / Total Received:"}</td>
+            <td colspan="3" style="text-align: right;">${D?"कुल अंशदान जमा / Total Contribution:":Y?"कुल आय / Total Income:":"कुल प्राप्त राशि / Total Received:"}</td>
             <td style="text-align: right; color: #059669;">${(0,oQ.formatPDFCurrency)(i.totalReceived)}</td>
             <td colspan="3"></td>
           </tr>
@@ -631,7 +631,7 @@
 
     <!-- Expense Ledger -->
     <div class="section-title">
-      <span>${D?"🧾 समूह खर्च बही / Group Expense Ledger":"📤 खर्च बही / Expense Ledger"}</span>
+      <span>${D?"🧾 समूह खर्च बही / Group Expense Ledger":Y?"🛒 दैनिक खर्च बही / Daily Expense Ledger":"📤 खर्च बही / Expense Ledger"}</span>
       <span class="count-badge">${B.length} प्रविष्टियां</span>
     </div>
     ${B.length>0?`
@@ -665,21 +665,21 @@
     ${D?`
       <!-- 1. चालू माह अंशदान स्थिति (सभी सदस्य) -->
       <div class="section-title">
-        <span>👥 चालू माह सदस्य अंशदान स्थिति / Current Month (${oE((0,oQ.formatHindiMonth)(l))}) Status</span>
-        <span class="count-badge">${u.length} सदस्य</span>
+        <span>👥 चालू माह सदस्य अंशदान स्थिति / Current Month (${oE((0,oQ.formatHindiMonth)(u))}) Status</span>
+        <span class="count-badge">${N.length} सदस्य</span>
       </div>
       <div style="display: flex; gap: 12px; margin-bottom: 14px; flex-wrap: wrap;">
         <div style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 8px; padding: 6px 14px; font-size: 12px; color: #065f46; display: flex; align-items: center; gap: 6px;">
-          <strong style="color: #059669; font-size: 14px;">✓</strong> <strong>जमा सदस्य:</strong> ${U} व्यक्ति
+          <strong style="color: #059669; font-size: 14px;">✓</strong> <strong>जमा सदस्य:</strong> ${f} व्यक्ति
         </div>
         <div style="background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 8px; padding: 6px 14px; font-size: 12px; color: #991b1b; display: flex; align-items: center; gap: 6px;">
-          <strong style="color: #dc2626; font-size: 14px;">☐</strong> <strong>बाकी सदस्य:</strong> ${f} व्यक्ति
+          <strong style="color: #dc2626; font-size: 14px;">☐</strong> <strong>बाकी सदस्य:</strong> ${y} व्यक्ति
         </div>
         <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 8px; padding: 6px 14px; font-size: 12px; color: #1e40af; display: flex; align-items: center; gap: 6px;">
-          <strong>💰 चालू माह कुल संग्रह:</strong> ${(0,oQ.formatPDFCurrency)(d)}
+          <strong>💰 चालू माह कुल संग्रह:</strong> ${(0,oQ.formatPDFCurrency)(U)}
         </div>
       </div>
-      ${u.length>0?`
+      ${N.length>0?`
         <table>
           <thead>
             <tr>
@@ -692,15 +692,15 @@
             </tr>
           </thead>
           <tbody>
-            ${y}
+            ${m}
           </tbody>
           <tfoot>
             <tr>
               <td colspan="3" style="text-align: right; font-weight: 700;">कुल अंशदान संग्रह / Total Collected:</td>
-              <td style="text-align: right; font-weight: 700; color: #059669; font-size: 13px;">${(0,oQ.formatPDFCurrency)(d)}</td>
+              <td style="text-align: right; font-weight: 700; color: #059669; font-size: 13px;">${(0,oQ.formatPDFCurrency)(U)}</td>
               <td colspan="2" style="text-align: right; font-size: 11px; font-weight: 600;">
-                <span style="color: #059669; font-weight: 700;">✓ ${U} जमा (Paid)</span> &nbsp;|&nbsp; 
-                <span style="color: #dc2626; font-weight: 700;">☐ ${f} बाकी (Pending)</span>
+                <span style="color: #059669; font-weight: 700;">✓ ${f} जमा (Paid)</span> &nbsp;|&nbsp; 
+                <span style="color: #dc2626; font-weight: 700;">☐ ${y} बाकी (Pending)</span>
               </td>
             </tr>
           </tfoot>
@@ -711,10 +711,10 @@
       <div class="section-title" style="margin-top: 24px;">
         <span style="color: #b91c1c;">⚠️ पिछले माह का बकाया / Previous Months Remaining Dues</span>
         <span class="count-badge" style="background: #fef2f2; color: #dc2626; border-color: #fecaca;">
-          ${N.length} बकायादार सदस्य
+          ${d.length} बकायादार सदस्य
         </span>
       </div>
-      ${N.length>0?`
+      ${d.length>0?`
         <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 8px; padding: 8px 14px; font-size: 12px; color: #92400e; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
           <span>⚠️</span>
           <span><strong>ध्यान दें:</strong> पिछले माह के केवल वही सदस्य नीचे सूचीबद्ध हैं जिनका अंशदान अभी बाकी है (जो सदस्य पूर्व में जमा कर चुके हैं, उनका हिसाब चुकता माना गया है)।</span>
@@ -730,7 +730,7 @@
             </tr>
           </thead>
           <tbody>
-            ${m}
+            ${R}
           </tbody>
         </table>
       `:`
@@ -772,8 +772,8 @@
         `:`
           <div class="sig-line"></div>
         `}
-        <div class="sig-label">${D?"कोषाध्यक्ष / जिम्मेदार सदस्य":"जिम्मेदार व्यक्ति के हस्ताक्षर"}</div>
-        <div class="sig-sub">${oE(A.responsiblePerson||(D?"कोषाध्यक्ष":"हस्ताक्षर"))}</div>
+        <div class="sig-label">${D?"कोषाध्यक्ष / जिम्मेदार सदस्य":Y?"खाताधारक / मेरा हस्ताक्षर":"जिम्मेदार व्यक्ति के हस्ताक्षर"}</div>
+        <div class="sig-sub">${oE(A.responsiblePerson||(D?"कोषाध्यक्ष":Y?"खाताधारक":"हस्ताक्षर"))}</div>
       </div>
       <div class="sig-box">
         ${o?`
@@ -784,8 +784,8 @@
         `:`
           <div class="sig-line"></div>
         `}
-        <div class="sig-label">${D?"अध्यक्ष / सचिव के हस्ताक्षर":"हिसाब जांचकर्ता / कोषाध्यक्ष"}</div>
-        <div class="sig-sub">${oE(r||"हस्ताक्षर व मुहर")}</div>
+        <div class="sig-label">${D?"अध्यक्ष / सचिव के हस्ताक्षर":Y?"अभिभावक / परीक्षक के हस्ताक्षर (वैकल्पिक)":"हिसाब जांचकर्ता / कोषाध्यक्ष"}</div>
+        <div class="sig-sub">${oE(r||(Y?"परीक्षक / परिवार":"हस्ताक्षर व मुहर"))}</div>
       </div>
     </div>
 
@@ -848,7 +848,7 @@
             remainingHeight -= pageHeightMm;
           }
 
-          pdf.save('${R}.pdf');
+          pdf.save('${p}.pdf');
           if (btn) btn.innerText = '📥 सीधा PDF डाउनलोड करें';
           URL.revokeObjectURL(url);
         };
